@@ -23,6 +23,14 @@ final class Retrieval
         public readonly array $passages,
         public readonly bool $usable,
         public readonly float $topScore,
+        /**
+         * 🚨 True when retrieval has not happened here and the relay will do
+         * it. In hosted mode the index lives on our infrastructure, so sending
+         * passages up would mean fetching them down first — two round trips to
+         * move data that never needed to leave. The answering path is otherwise
+         * identical, which is the point of the seam.
+         */
+        public readonly bool $deferred = false,
     ) {
     }
 
@@ -37,5 +45,11 @@ final class Retrieval
     public static function nothing(): self
     {
         return new self([], false, 0.0);
+    }
+
+    /** Hosted mode: the relay holds the index and will retrieve for itself. */
+    public static function deferred(): self
+    {
+        return new self([], true, 0.0, deferred: true);
     }
 }

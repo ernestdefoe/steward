@@ -39,15 +39,24 @@ class Answerer
             return Answer::dontKnow($retrieval->topScore);
         }
 
+        /*
+         * 🚨 In hosted mode we send the question alone and the relay retrieves
+         * from the index it already holds. Fetching passages down only to send
+         * them straight back up would be two round trips to move data that
+         * never needed to leave.
+         */
+        $payload = ['question' => mb_substr($question, 0, 2000)];
+
+        if (! $retrieval->deferred) {
+            $payload['passages'] = array_map(fn (Passage $p) => [
+                'title' => $p->title,
+                'text'  => mb_substr($p->text, 0, 2000),
+                'url'   => $p->url,
+            ], $retrieval->passages);
+        }
+
         try {
-            $res = $this->relay->post('v1/answer', [
-                'question' => mb_substr($question, 0, 2000),
-                'passages' => array_map(fn (Passage $p) => [
-                    'title' => $p->title,
-                    'text'  => mb_substr($p->text, 0, 2000),
-                    'url'   => $p->url,
-                ], $retrieval->passages),
-            ]);
+            $res = $this->relay->post('v1/answer', $payload);
         } catch (RelayException $e) {
             return Answer::unavailable($e->exhausted);
         }

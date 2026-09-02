@@ -18,6 +18,17 @@ return Migration::addSettings([
     'steward.answer_threshold' => '0.62',
 
     // Above this post count a member is never screened.
+    /*
+     * Leave blank to have retrieval run on our servers — if the plan allows it.
+     * Fill it in and retrieval runs on this forum's own cluster instead, and
+     * its content never leaves.
+     */
+    'steward.opensearch_url'   => '',
+    'steward.opensearch_index' => '',
+    'steward.opensearch_model' => '',
+    'steward.opensearch_user'  => '',
+    'steward.opensearch_pass'  => '',
+
     'steward.trusted_posts'   => '25',
     'steward.new_account_days' => '7',
 ]);

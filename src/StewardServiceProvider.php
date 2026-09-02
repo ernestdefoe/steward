@@ -3,6 +3,9 @@
 namespace Ernestdefoe\Steward;
 
 use Ernestdefoe\Steward\Answers\Answerer;
+use Ernestdefoe\Steward\Answers\HostedRetrieval;
+use Ernestdefoe\Steward\Answers\LocalRetrieval;
+use Ernestdefoe\Steward\Answers\RetrievalProvider;
 use Ernestdefoe\Steward\Moderation\PreFilter;
 use Ernestdefoe\Steward\Moderation\Screener;
 use Ernestdefoe\Steward\Relay\RelayClient;
@@ -48,6 +51,36 @@ class StewardServiceProvider extends AbstractServiceProvider
             $c->make(RelayClient::class),
             $c->make(LoggerInterface::class),
         ));
+
+        /*
+         * 🚨 The site does not choose its mode — it offers what it can.
+         *
+         * If an OpenSearch cluster is configured here, retrieval runs there and
+         * only the question and its own passages ever leave. If it is not, the
+         * site sends the question alone, and the RELAY decides whether it is
+         * entitled to hosted retrieval by looking at the tier behind the key.
+         * So there is no mode to negotiate and nothing here to spoof: leaving
+         * the cluster blank asks for hosted, and asking is not the same as
+         * being allowed.
+         */
+        $this->container->singleton(RetrievalProvider::class, function ($c) {
+            $settings = $c->make(SettingsRepositoryInterface::class);
+            $url = (string) $settings->get('steward.opensearch_url');
+
+            if ($url === '') {
+                return new HostedRetrieval();
+            }
+
+            return new LocalRetrieval(
+                $url,
+                (string) $settings->get('steward.opensearch_index'),
+                (string) $settings->get('steward.opensearch_model'),
+                (string) $settings->get('steward.opensearch_user'),
+                (string) $settings->get('steward.opensearch_pass'),
+                (float) ($settings->get('steward.answer_threshold') ?: 0.62),
+                $c->make(LoggerInterface::class),
+            );
+        });
 
         $this->container->singleton(Answerer::class, function ($c) {
             $settings = $c->make(SettingsRepositoryInterface::class);
