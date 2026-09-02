@@ -1,0 +1,18 @@
+ernestdefoe-steward:
+  admin:
+    settings:
+      site_key_label: "Site key"
+      site_key_help: "From your client area. It is bound to this domain — the same key will not work on another site."
+      relay_url_label: "Service URL"
+      moderation_label: "Screen new posts"
+      moderation_help: "Most posts are cleared instantly and for free. Only genuinely ambiguous ones are looked at more closely, and nothing is ever removed automatically — anything questionable is queued for you."
+      answers_label: "Answer questions from your forum"
+      answers_help: "Members can ask, and get an answer drawn from your own discussions. When nothing on your forum answers the question, it says so rather than guessing."
+      trusted_posts_label: "Trust members after this many posts"
+      trusted_posts_help: "Established members are never screened."
+      threshold_label: "Answer confidence threshold"
+      threshold_help: "Below this, Steward says it does not know rather than answering from a weak match. 0.62 suits most forums."
+  forum:
+    review:
+      queued: "Queued for review"
+      unscreened: "Posted without screening"
