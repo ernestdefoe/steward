@@ -1,0 +1,36 @@
+{
+    "name": "ernestdefoe/steward",
+    "description": "Hosted AI for Flarum \u2014 answers from your own content, and moderation that reads before it flags. No AI account, no API key.",
+    "type": "flarum-extension",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "flarum/core": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ernestdefoe\\Steward\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ernestdefoe\\Steward\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Steward",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-user-shield",
+                "backgroundColor": "#17864e",
+                "color": "#fff"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
