@@ -28,6 +28,14 @@ app.initializers.add('ernestdefoe/steward', () => {
       label: app.translator.trans('ernestdefoe-steward.admin.settings.trusted_posts_label'),
       help: app.translator.trans('ernestdefoe-steward.admin.settings.trusted_posts_help'),
     })
+    .registerPermission(
+      {
+        icon: 'fas fa-user-shield',
+        label: app.translator.trans('ernestdefoe-steward.admin.permissions.review_label'),
+        permission: 'steward.review',
+      },
+      'moderate'
+    )
     .registerSetting({
       setting: 'steward.answer_threshold',
       type: 'text',

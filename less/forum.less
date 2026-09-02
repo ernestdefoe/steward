@@ -1,2 +1,67 @@
 /* Steward has no forum-side UI yet; the file exists so the frontend extender
    has something to compile and the extension enables cleanly. */
+
+/* ---- moderation queue ---------------------------------------------------- */
+
+.StewardQueue {
+  --sq-line: color-mix(in srgb, currentColor 14%, transparent);
+  --sq-surface: color-mix(in srgb, currentColor 4%, transparent);
+  padding: 32px 0 64px;
+}
+
+.StewardQueue-head h1 { margin: 0 0 4px; font-size: 24px; }
+.StewardQueue-sub { margin: 0 0 20px; color: var(--muted-color); max-width: 62ch; }
+
+.StewardQueue-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 18px; }
+.StewardQueue-tab {
+  border: 0; background: none; cursor: pointer;
+  padding: 7px 13px; border-radius: 999px;
+  font-weight: 600; font-size: 13px; color: var(--muted-color);
+
+  &:hover { background: var(--sq-surface); }
+  &.is-on { background: var(--primary-color); color: #fff; }
+}
+
+.StewardQueue-note,
+.StewardQueue-error,
+.StewardQueue-empty {
+  padding: 14px 16px; border-radius: 8px; background: var(--sq-surface);
+  color: var(--muted-color); font-size: 14px; margin-bottom: 16px;
+}
+.StewardQueue-error { color: var(--alert-error-color, #b33); }
+
+.StewardCard {
+  border: 1px solid var(--sq-line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+/* A post that went unchecked is not an accusation — it reads quieter. */
+.StewardCard--unscreened { border-style: dashed; opacity: .85; }
+
+.StewardCard-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.StewardCard-who { font-weight: 600; }
+.StewardCard-source { font-size: 12px; color: var(--muted-color); }
+
+.StewardCard-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor;
+  &--guardian { color: var(--alert-error-color, #b33); }
+}
+
+/* Reasons come before the post text: why, then what. */
+.StewardCard-reasons {
+  margin: 0 0 10px; padding-left: 18px; font-size: 14px;
+  li { margin-bottom: 2px; }
+}
+
+.StewardCard-excerpt {
+  margin: 0 0 12px; padding: 10px 12px;
+  border-left: 3px solid var(--sq-line);
+  background: var(--sq-surface);
+  font-size: 14px; color: var(--muted-color);
+}
+
+.StewardCard-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.StewardCard-resolved { font-size: 13px; color: var(--muted-color); }
