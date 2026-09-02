@@ -7,7 +7,18 @@ return Migration::addSettings([
     // and no API key: which model runs is the relay's decision, because that
     // is what keeps a tier profitable.
     'steward.site_key'        => '',
-    'steward.relay_url'       => 'https://relay.ernestdefoe.online',
+    /*
+     * 🚨 Must be a host that actually resolves, and must stay resolvable
+     * forever. This value is written once at INSTALL, so changing it in a later
+     * version does not reach anybody who already installed — a default that is
+     * wrong today is wrong permanently for every forum that installed today.
+     *
+     * 1.0.0 shipped 'relay.ernestdefoe.online', which has no DNS record. Every
+     * customer would have pasted their key and been told the service was
+     * unavailable, which is indistinguishable from an outage and is the first
+     * thing they would ever have seen.
+     */
+    'steward.relay_url'       => 'https://ernestdefoe.online',
 
     'steward.moderation'      => '1',
     'steward.answers'         => '1',
