@@ -1,0 +1,46 @@
+/* ---- usage panel ---------------------------------------------------------- */
+
+.StewardUsage {
+  --su-line: color-mix(in srgb, currentColor 14%, transparent);
+  --su-track: color-mix(in srgb, currentColor 8%, transparent);
+  border: 1px solid var(--su-line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+.StewardUsage--off { color: var(--muted-color); }
+.StewardUsage--off p { margin: 0; }
+
+.StewardUsage-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.StewardUsage-head h3 { margin: 0; font-size: 15px; }
+.StewardUsage-plan {
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--su-line);
+  color: var(--muted-color);
+}
+
+.StewardUsage-meter { margin-bottom: 12px; }
+.StewardUsage-meterHead {
+  display: flex; justify-content: space-between;
+  font-size: 13px; margin-bottom: 5px;
+}
+/* Running low is said in words as well as colour — the number is the message. */
+.StewardUsage-meterHead .is-low { color: var(--alert-error-color, #b33); font-weight: 600; }
+
+.StewardUsage-track { height: 6px; border-radius: 999px; background: var(--su-track); overflow: hidden; }
+.StewardUsage-fill {
+  height: 100%; border-radius: 999px; background: var(--primary-color);
+  transition: width .3s ease;
+  &.is-low { background: var(--alert-error-color, #b33); }
+}
+
+.StewardUsage-chart {
+  display: flex; align-items: flex-end; gap: 1px;
+  height: 44px; margin: 14px 0 8px;
+}
+.StewardUsage-day {
+  background: var(--primary-color); opacity: .5; border-radius: 1px 1px 0 0; min-height: 2px;
+  &:hover { opacity: 1; }
+}
+
+.StewardUsage-reset { margin: 0; font-size: 12px; color: var(--muted-color); }

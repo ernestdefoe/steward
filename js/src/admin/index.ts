@@ -1,8 +1,19 @@
 import app from 'flarum/admin/app';
+import UsagePanel from './components/UsagePanel';
+
+declare const m: any;
 
 app.initializers.add('ernestdefoe/steward', () => {
   app.extensionData
     .for('ernestdefoe-steward')
+    /*
+     * 🚨 Usage first, above the settings.
+     *
+     * This is the thing an admin opens the page to find out, and burying it
+     * under a form is how "why did the assistant stop working?" becomes a
+     * support ticket instead of a glance.
+     */
+    .registerSetting(() => m(UsagePanel))
     .registerSetting({
       setting: 'steward.site_key',
       type: 'text',

@@ -16,6 +16,11 @@ class ForumFields
         return [
             Schema\Boolean::make('canReviewSteward')
                 ->get(fn ($model, Context $context) => $context->getActor()->hasPermission('steward.review')),
+
+            // So the nav item is only offered where asking actually works.
+            Schema\Boolean::make('stewardAnswers')
+                ->get(fn () => (bool) resolve(\Flarum\Settings\SettingsRepositoryInterface::class)
+                    ->get('steward.answers')),
         ];
     }
 }
