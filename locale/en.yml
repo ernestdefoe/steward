@@ -18,6 +18,7 @@ ernestdefoe-steward:
       screenings: "Posts screened"
       left: "{n} of {total} left"
       unmetered: "No limit"
+      unmeteredUsed: "{n} used · no limit"
       resets: "Resets {date}"
       not_connected: "Not connected yet. Paste your site key above and your usage will appear here."
       chart_label: "Daily usage over the last {n} days"

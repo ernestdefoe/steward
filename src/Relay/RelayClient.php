@@ -28,12 +28,24 @@ use Throwable;
  */
 class RelayClient
 {
+    /** Where the relay publishes its endpoints, relative to the site root. */
+    private const PREFIX = '/api/steward/';
+
     private Client $http;
 
     public function __construct(
         private string $baseUrl,
         private string $siteKey,
         private LoggerInterface $log,
+        /*
+         * 🚨 This forum's own URL, sent as Origin on every call.
+         *
+         * A site key is bound to one origin and the relay re-checks that
+         * binding on EVERY request, not just at binding time — so a client that
+         * sends no Origin is refused every time, which is what a stolen key
+         * looks like and is exactly what this forum looked like until now.
+         */
+        private string $ownUrl = '',
         ?Client $http = null,
     ) {
         $this->http = $http ?? new Client([
@@ -59,14 +71,25 @@ class RelayClient
             throw new RelayException('Steward is not connected — no site key.');
         }
 
-        $url = rtrim($this->baseUrl, '/') . '/' . ltrim($path, '/');
+        /*
+         * 🚨 The relay's prefix lives HERE, in one place, not in each caller.
+         *
+         * Callers pass 'v1/usage'; the relay publishes /api/steward/v1/usage.
+         * When those two disagreed, every call 404'd — and a 404 arrives
+         * looking exactly like a refusal or an outage, so the extension
+         * reported "the AI service is unavailable" and both halves looked
+         * individually healthy under direct testing. Nothing about a path
+         * mismatch announces itself.
+         */
+        $url = rtrim($this->baseUrl, '/') . self::PREFIX . ltrim($path, '/');
 
         try {
             $res = $this->http->post($url, [
-                'headers' => [
+                'headers' => array_filter([
                     'Authorization' => 'Bearer ' . $this->siteKey,
                     'Accept'        => 'application/json',
-                ],
+                    'Origin'        => $this->ownUrl !== '' ? rtrim($this->ownUrl, '/') : null,
+                ]),
                 'json' => $payload,
             ]);
         } catch (ClientException $e) {

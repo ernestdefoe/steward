@@ -34,6 +34,9 @@ class StewardServiceProvider extends AbstractServiceProvider
                 (string) $settings->get('steward.relay_url'),
                 (string) $settings->get('steward.site_key'),
                 $c->make(LoggerInterface::class),
+                // The forum's canonical URL — this is the identity the key is
+                // bound to, so it comes from config, never from a request.
+                (string) $c->make('flarum.config')->url(),
             );
         });
 

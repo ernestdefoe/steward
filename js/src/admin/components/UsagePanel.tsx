@@ -65,7 +65,15 @@ export default class UsagePanel extends Component {
 
         {u.resetsAt && (
           <p className="StewardUsage-reset">
-            {t('resets', { date: new Date(u.resetsAt * 1000).toLocaleDateString() })}
+            {t('resets', {
+              /*
+               * 🚨 Render in UTC. The period boundary is a UTC midnight, so
+               * formatting it in the viewer's local zone shows the last day of
+               * the month as the second-to-last one anywhere west of London —
+               * a billing date that is visibly wrong to the customer.
+               */
+              date: new Date(u.resetsAt * 1000).toLocaleDateString(undefined, { timeZone: 'UTC' }),
+            })}
           </p>
         )}
       </div>
@@ -78,9 +86,15 @@ export default class UsagePanel extends Component {
     // No limit is a real state, not a zero. Rendering an empty bar for an
     // unmetered plan would read as "nothing left".
     if (m2.limit === null) {
+      // Still show the count. On an unmetered plan nothing else bounds usage,
+      // so the running total is the only figure worth looking at — printing
+      // just the word "unmetered" tells an admin strictly less than nothing.
       return (
         <div className="StewardUsage-meter">
-          <div className="StewardUsage-meterHead"><span>{label}</span><span>{t('unmetered')}</span></div>
+          <div className="StewardUsage-meterHead">
+            <span>{label}</span>
+            <span>{t('unmeteredUsed', { n: (m2.used ?? 0).toLocaleString() })}</span>
+          </div>
         </div>
       );
     }
