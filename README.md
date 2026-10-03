@@ -8,6 +8,8 @@ Distinct from **AI Helper**, which stays bring-your-own-key for people who want
 to run their own model. Steward is sold as capacity through the client area and
 adds moderation.
 
+![The Ask this forum page: a question box answered from discussions and documentation already on the site](screenshots/ask.png)
+
 ---
 
 ## What it does
@@ -26,6 +28,8 @@ Retrieval runs against your forum's own search, or — on plans that include it 
 against a hosted semantic index, so answers are found by meaning rather than
 keyword overlap.
 
+Members ask at `/ask`.
+
 ### Moderation, that never deletes
 
 Every new post is read before it lands. Most are cleared instantly and for
@@ -42,8 +46,16 @@ nothing; only genuinely ambiguous ones are looked at more closely.
 - **A moderation outage is not a posting outage.** If the service is
   unreachable, posts publish and are marked unscreened rather than blocked.
 
-Flagged posts land in a review queue on your forum, for whoever holds the
-`steward.review` permission.
+Flagged posts land in a review queue on your forum at `/moderation/queue`, for
+whoever holds the `steward.review` permission.
+
+![The moderation queue with its three tabs: Needs a look, Went unchecked, and Done](screenshots/queue.png)
+
+- **Needs a look:** posts Steward could not settle on its own, with its reasons.
+- **Went unchecked:** posts published without screening because the allowance
+  ran out or the service was unreachable. Not suspicious, just the window nobody
+  checked.
+- **Done:** what has already been dealt with.
 
 ### Usage where you will actually look
 
@@ -54,10 +66,28 @@ are about to run out.
 
 ---
 
+## Settings
+
+Admin → Steward:
+
+![Steward's settings: the usage panel, site key, the screening and answers switches, the trust threshold and the answer confidence threshold](screenshots/admin.png)
+
+- **Site key:** from your client area, bound to this domain.
+- **Screen new posts:** moderation on or off.
+- **Answer questions from your forum:** the Ask page on or off.
+- **Trust members after this many posts:** members past this count are never screened. 25 by default.
+- **Answer confidence threshold:** below this, Steward says it does not know rather than answering from a weak match. 0.62 by default, which suits most forums.
+
+Your usage panel sits at the top of the same page once the key is in.
+
+---
+
 ## Install
 
 ```bash
 composer require ernestdefoe/steward
+php flarum migrate
+php flarum cache:clear
 ```
 
 Enable it, then paste your site key into its settings. The key is bound to one
@@ -65,6 +95,14 @@ domain and re-checked on every request, so it cannot be used anywhere else.
 
 Requires **Flarum 2.0** and PHP 8.3+. A subscription is required:
 <https://ernestdefoe.online/account>
+
+## Updating
+
+```bash
+composer update ernestdefoe/steward
+php flarum migrate
+php flarum cache:clear
+```
 
 ---
 
