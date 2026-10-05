@@ -35,6 +35,10 @@ return [
         ->get('/steward/usage', 'steward.usage', \Ernestdefoe\Steward\Api\UsageController::class)
         ->post('/steward/ask', 'steward.ask', \Ernestdefoe\Steward\Api\AskController::class),
 
+    // An ask holds a worker for up to two outbound calls; cap it per member.
+    (new Extend\ThrottleApi())
+        ->set('stewardAsk', \Ernestdefoe\Steward\Api\AskThrottler::class),
+
     (new Extend\ServiceProvider())
         ->register(\Ernestdefoe\Steward\StewardServiceProvider::class),
 ];
