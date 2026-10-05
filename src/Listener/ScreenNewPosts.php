@@ -4,6 +4,8 @@ namespace Ernestdefoe\Steward\Listener;
 
 use Ernestdefoe\Steward\Job\IndexPost;
 use Ernestdefoe\Steward\Job\ScreenPost;
+use Flarum\Discussion\Discussion;
+use Flarum\Discussion\Event\Deleting as DiscussionDeleting;
 use Flarum\Post\CommentPost;
 use Flarum\Post\Event\Deleted;
 use Flarum\Post\Event\Hidden;
@@ -45,6 +47,52 @@ class ScreenNewPosts
         $events->listen(Restored::class, [$this, 'whenRevised']);
         $events->listen(Hidden::class, [$this, 'whenHidden']);
         $events->listen(Deleted::class, [$this, 'whenHidden']);
+
+        /*
+         * 🚨 Who can read a post also changes when its DISCUSSION changes: moved
+         * into a staff-only tag, made private, hidden, or approved. Each of
+         * those re-sends every post in it, and the job decides afresh whether
+         * a guest can read it — indexing it or withdrawing it accordingly.
+         * Class strings, so a forum without tags or approval loses nothing.
+         */
+        $events->listen('Flarum\\Tags\\Event\\DiscussionWasTagged', [$this, 'whenDiscussionChanged']);
+        $events->listen('Flarum\\Approval\\Event\\PostWasApproved', [$this, 'whenRevised']);
+        $events->listen('eloquent.saved: ' . Discussion::class, [$this, 'whenDiscussionSaved']);
+        $events->listen(DiscussionDeleting::class, [$this, 'whenDiscussionDeleting']);
+    }
+
+    public function whenDiscussionChanged(object $event): void
+    {
+        if (isset($event->discussion) && $event->discussion instanceof Discussion) {
+            $this->requeueDiscussion($event->discussion);
+        }
+    }
+
+    /** Hidden, restored, made private or public, approved: anything that moves who can read it. */
+    public function whenDiscussionSaved(Discussion $discussion): void
+    {
+        if ($discussion->wasChanged(['hidden_at', 'is_private', 'is_approved'])) {
+            $this->requeueDiscussion($discussion);
+        }
+    }
+
+    /** Its posts go with it and fire no events of their own, so withdraw them now. */
+    public function whenDiscussionDeleting(DiscussionDeleting $event): void
+    {
+        $this->requeueDiscussion($event->discussion, withdraw: true);
+    }
+
+    private function requeueDiscussion(Discussion $discussion, bool $withdraw = false): void
+    {
+        if (! $discussion->id || ! (bool) $this->settings->get('steward.answers')) {
+            return;
+        }
+
+        $ids = CommentPost::query()->where('discussion_id', $discussion->id)->pluck('id');
+
+        foreach ($ids as $id) {
+            $this->queue->push(new IndexPost((int) $id, withdraw: $withdraw));
+        }
     }
 
     public function handle(Posted $event): void
