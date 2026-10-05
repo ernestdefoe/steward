@@ -9,6 +9,8 @@ final class Passage
         public readonly string $text,
         public readonly string $url,
         public readonly float $score,
+        /** The post this passage came from, when the index records it. */
+        public readonly ?int $postId = null,
     ) {
     }
 }

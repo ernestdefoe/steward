@@ -104,13 +104,28 @@ php flarum migrate
 php flarum cache:clear
 ```
 
+Updating from 1.0.2 or earlier: run this once. Those versions indexed posts in
+staff-only or restricted tags and posts awaiting approval; this removes them from
+the hosted index (public posts are left alone).
+
+```bash
+php flarum steward:withdraw-restricted
+```
+
 ---
 
 ## Your data
 
-Only **public** content is ever sent. Posts in private or hidden discussions are
-never indexed, and a post that stops being public is withdrawn from the index
-rather than left behind.
+Only **public** content is ever sent: what a signed-out visitor can read. Posts
+in private, hidden or restricted-tag discussions, hidden posts and posts awaiting
+approval are never indexed, and a post that stops being public (moved to a
+restricted tag, made private, hidden) is withdrawn from the index rather than
+left behind.
+
+With your own OpenSearch index, every passage that is a forum post is checked
+against the member asking before it is answered from or cited, so nobody is
+answered from a thread they cannot open. For that check, index documents should
+carry a `postId` field or a `/d/<id>-<slug>/<number>` link in `url`.
 
 On hosted retrieval your index is yours alone, and is **deleted when you
 cancel** — on the same call that ends the service, not in a cleanup job somebody

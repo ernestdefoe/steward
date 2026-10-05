@@ -60,7 +60,7 @@ class LocalRetrieval implements RetrievalProvider
                     'auth' => $this->username !== '' ? [$this->username, $this->password] : null,
                     'json' => [
                         'size'    => $limit,
-                        '_source' => ['title', 'body', 'url'],
+                        '_source' => ['title', 'body', 'url', 'postId'],
                         'query'   => ['neural' => ['body_embedding' => [
                             'query_text' => $question,
                             'model_id'   => $this->modelId,
@@ -91,6 +91,7 @@ class LocalRetrieval implements RetrievalProvider
                 (string) ($src['body'] ?? ''),
                 (string) ($src['url'] ?? ''),
                 (float) ($hit['_score'] ?? 0),
+                isset($src['postId']) && is_numeric($src['postId']) ? (int) $src['postId'] : null,
             );
         }
 

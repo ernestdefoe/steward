@@ -31,7 +31,25 @@ final class Retrieval
          * identical, which is the point of the seam.
          */
         public readonly bool $deferred = false,
+        private readonly float $threshold = 0.0,
     ) {
+    }
+
+    /**
+     * The same retrieval with only the passages $keep accepts, re-judged
+     * against the same threshold. Used to drop what the asker may not read
+     * BEFORE anything is answered from it: a strong match the asker cannot
+     * see must not make a weak remainder look answerable either.
+     *
+     * @param callable(Passage): bool $keep
+     */
+    public function only(callable $keep): self
+    {
+        if ($this->deferred) {
+            return $this;
+        }
+
+        return self::from(array_values(array_filter($this->passages, $keep)), $this->threshold);
     }
 
     /** @param list<Passage> $passages */
@@ -39,7 +57,7 @@ final class Retrieval
     {
         $top = $passages ? max(array_map(fn (Passage $p) => $p->score, $passages)) : 0.0;
 
-        return new self($passages, $passages !== [] && $top >= $threshold, $top);
+        return new self($passages, $passages !== [] && $top >= $threshold, $top, false, $threshold);
     }
 
     public static function nothing(): self

@@ -4,6 +4,7 @@ namespace Ernestdefoe\Steward\Api;
 
 use Ernestdefoe\Steward\Answers\Answerer;
 use Ernestdefoe\Steward\Answers\Passage;
+use Ernestdefoe\Steward\Answers\PassageVisibility;
 use Ernestdefoe\Steward\Answers\RetrievalProvider;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
@@ -23,6 +24,7 @@ class AskController implements RequestHandlerInterface
         private RetrievalProvider $retrieval,
         private Answerer $answerer,
         private SettingsRepositoryInterface $settings,
+        private PassageVisibility $visibility,
     ) {
     }
 
@@ -51,7 +53,15 @@ class AskController implements RequestHandlerInterface
             throw new ValidationException(['question' => 'Ask a question first.']);
         }
 
-        $answer = $this->answerer->answer($question, $this->retrieval->find($question));
+        /*
+         * 🚨 Only what this member could read on the forum is answered from or
+         * cited. The passages are narrowed BEFORE they reach the model, so a
+         * restricted thread can shape neither the answer nor the sources.
+         * (Hosted retrieval holds only guest-visible posts; see IndexPost.)
+         */
+        $retrieval = $this->visibility->restrict($this->retrieval->find($question), $actor);
+
+        $answer = $this->answerer->answer($question, $retrieval);
 
         /*
          * 🚨 Running out and breaking are told apart, and neither is dressed up
