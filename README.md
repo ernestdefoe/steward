@@ -156,8 +156,9 @@ is roughly $0.51 per 15,000 posts against $5.25 with no pre-filter.
 
 ## Support
 
-- **Support site:** [ernestdefoe.online](https://ernestdefoe.online)
-- **Issues:** [github.com/ernestdefoe/steward/issues](https://github.com/ernestdefoe/steward/issues)
+- **Support forum:** [Steward on ernestdefoe.online](https://ernestdefoe.online/d/82)
+- **Flarum community:** [Steward on discuss.flarum.org](https://discuss.flarum.org/d/39795-steward-hosted-ai-and-moderation-built-with-ai)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/steward/issues)
 
 ## Discuss
 
