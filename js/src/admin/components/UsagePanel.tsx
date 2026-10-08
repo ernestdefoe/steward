@@ -80,7 +80,7 @@ export default class UsagePanel extends Component {
     );
   }
 
-  bar(label: string, m2: any) {
+  bar(label: ReturnType<typeof t>, m2: any) {
     if (!m2) return null;
 
     // No limit is a real state, not a zero. Rendering an empty bar for an

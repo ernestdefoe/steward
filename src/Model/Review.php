@@ -7,6 +7,22 @@ use Flarum\Post\Post;
 use Flarum\User\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $post_id
+ * @property int|null $user_id
+ * @property string $action  review | guardian
+ * @property string $source  pre-filter | model
+ * @property string $reasons  JSON list of plain-words reasons
+ * @property float $confidence
+ * @property bool $unscreened
+ * @property string|null $resolution  kept | removed | ignored
+ * @property int|null $resolved_by
+ * @property \Carbon\Carbon|null $resolved_at
+ * @property \Carbon\Carbon|null $created_at
+ * @property-read Post|null $post
+ * @property-read User|null $user
+ */
 class Review extends AbstractModel
 {
     protected $table = 'steward_reviews';
@@ -33,11 +49,13 @@ class Review extends AbstractModel
         'resolved_at' => 'datetime',
     ];
 
+    /** @return BelongsTo<Post, $this> */
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

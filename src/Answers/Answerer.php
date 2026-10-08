@@ -25,7 +25,6 @@ class Answerer
 {
     public function __construct(
         private RelayClient $relay,
-        private float $threshold = 0.62,
     ) {
     }
 

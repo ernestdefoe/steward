@@ -99,9 +99,9 @@ class ScreenNewPosts
     {
         $post = $event->post;
 
-        // Only real content. Event posts — renames, tag changes — have nothing
-        // to moderate and calling formatContent() on one throws.
-        if (! ($post instanceof CommentPost) || ! $post->id) {
+        // Posted only ever carries a comment (event posts — renames, tag
+        // changes — never fire it), so the one thing to check is that it saved.
+        if (! $post->id) {
             return;
         }
 

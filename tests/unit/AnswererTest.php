@@ -45,7 +45,7 @@ class AnswererTest extends TestCase
     public function testWeakMatchIsNotAnsweredAndCostsNothing(): void
     {
         $relay = $this->relay(['answer' => 'Here is how to do that!']);
-        $a = (new Answerer($relay, threshold: 0.62))
+        $a = (new Answerer($relay))
             ->answer('banana helicopter tuesday', Retrieval::from($this->passages(0.576), 0.62));
 
         $this->assertFalse($a->answered);
@@ -55,7 +55,7 @@ class AnswererTest extends TestCase
     public function testGoodMatchIsAnswered(): void
     {
         $relay = $this->relay(['answer' => 'Open settings and add a passkey.']);
-        $a = (new Answerer($relay, threshold: 0.62))
+        $a = (new Answerer($relay))
             ->answer('how do I change my password', Retrieval::from($this->passages(0.666), 0.62));
 
         $this->assertTrue($a->answered);
@@ -72,7 +72,7 @@ class AnswererTest extends TestCase
     public function testModelMaySayItDoesNotKnowEvenOnAStrongMatch(): void
     {
         $relay = $this->relay(['answered' => false, 'answer' => '']);
-        $a = (new Answerer($relay, threshold: 0.62))
+        $a = (new Answerer($relay))
             ->answer('the forum is running slowly', Retrieval::from($this->passages(0.748), 0.62));
 
         $this->assertFalse($a->answered, 'a high score must not force an answer');
@@ -82,7 +82,7 @@ class AnswererTest extends TestCase
     public function testEmptyAnswerIsTreatedAsNotKnowing(): void
     {
         $relay = $this->relay(['answered' => true, 'answer' => '   ']);
-        $a = (new Answerer($relay, threshold: 0.62))
+        $a = (new Answerer($relay))
             ->answer('anything', Retrieval::from($this->passages(0.9), 0.62));
 
         $this->assertFalse($a->answered);

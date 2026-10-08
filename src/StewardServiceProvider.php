@@ -85,13 +85,8 @@ class StewardServiceProvider extends AbstractServiceProvider
             );
         });
 
-        $this->container->singleton(Answerer::class, function ($c) {
-            $settings = $c->make(SettingsRepositoryInterface::class);
-
-            return new Answerer(
-                $c->make(RelayClient::class),
-                (float) ($settings->get('steward.answer_threshold') ?: 0.62),
-            );
-        });
+        // The answer threshold is applied by retrieval (Retrieval::from), so
+        // the answerer needs only the relay.
+        $this->container->singleton(Answerer::class, fn ($c) => new Answerer($c->make(RelayClient::class)));
     }
 }
