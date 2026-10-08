@@ -39,7 +39,7 @@ class Screener
 
         try {
             $res = $this->relay->post('v1/screen', [
-                'text'    => mb_substr($body, 0, 6000),
+                'text' => mb_substr($body, 0, 6000),
                 'signals' => $pre->reasons,
             ]);
         } catch (RelayException $e) {
@@ -56,7 +56,7 @@ class Screener
              * is exactly why that is Guardian's job and not this one.
              */
             $this->log->warning('[steward] screening unavailable, allowing post', [
-                'reason'    => $e->getMessage(),
+                'reason' => $e->getMessage(),
                 'exhausted' => $e->exhausted,
             ]);
 
@@ -78,7 +78,7 @@ class Screener
     private function interpret(array $data, array $preReasons): Decision
     {
         $verdict = strtolower((string) ($data['verdict'] ?? 'allow'));
-        $reason  = trim((string) ($data['reason'] ?? ''));
+        $reason = trim((string) ($data['reason'] ?? ''));
         $reasons = $reason !== '' ? [$reason] : $preReasons;
 
         /*
@@ -95,8 +95,8 @@ class Screener
 
         return match ($verdict) {
             'remove', 'reject', 'spam' => Decision::review($reasons, 'model', 0.9),
-            'review', 'unsure'         => Decision::review($reasons, 'model', 0.5),
-            default                    => Decision::allow('the model saw nothing wrong'),
+            'review', 'unsure' => Decision::review($reasons, 'model', 0.5),
+            default => Decision::allow('the model saw nothing wrong'),
         };
     }
 }

@@ -38,7 +38,7 @@ class UsageController implements RequestHandlerInterface
         } catch (RelayException $e) {
             return new JsonResponse([
                 'connected' => false,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 200);
         }
 

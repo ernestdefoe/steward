@@ -71,7 +71,7 @@ class AskController implements RequestHandlerInterface
         if ($answer->unavailable) {
             return new JsonResponse([
                 'answered' => false,
-                'reason'   => $answer->exhausted ? 'exhausted' : 'unavailable',
+                'reason' => $answer->exhausted ? 'exhausted' : 'unavailable',
             ]);
         }
 
@@ -81,12 +81,12 @@ class AskController implements RequestHandlerInterface
 
         return new JsonResponse([
             'answered' => true,
-            'answer'   => $answer->text,
+            'answer' => $answer->text,
             // Always cited. An answer built from the forum's own posts should
             // show which ones, so a member can check it rather than trust it.
-            'sources'  => array_map(fn (Passage $p) => [
+            'sources' => array_map(fn (Passage $p) => [
                 'title' => $p->title,
-                'url'   => $p->url,
+                'url' => $p->url,
             ], $answer->sources),
         ]);
     }

@@ -35,10 +35,10 @@ class LocalRetrieval implements RetrievalProvider
         ?Client $http = null,
     ) {
         $this->http = $http ?? new Client([
-            'timeout'         => 12,
+            'timeout' => 12,
             'connect_timeout' => 5,
             // Self-signed certificates are the norm on a private cluster.
-            'verify'          => false,
+            'verify' => false,
         ]);
     }
 
@@ -55,16 +55,16 @@ class LocalRetrieval implements RetrievalProvider
 
         try {
             $res = $this->http->post(
-                rtrim($this->baseUrl, '/') . '/' . rawurlencode($this->index) . '/_search',
+                rtrim($this->baseUrl, '/').'/'.rawurlencode($this->index).'/_search',
                 [
                     'auth' => $this->username !== '' ? [$this->username, $this->password] : null,
                     'json' => [
-                        'size'    => $limit,
+                        'size' => $limit,
                         '_source' => ['title', 'body', 'url', 'postId'],
-                        'query'   => ['neural' => ['body_embedding' => [
+                        'query' => ['neural' => ['body_embedding' => [
                             'query_text' => $question,
-                            'model_id'   => $this->modelId,
-                            'k'          => $limit,
+                            'model_id' => $this->modelId,
+                            'k' => $limit,
                         ]]],
                     ],
                 ]

@@ -57,7 +57,7 @@ class ScreenNewPosts
          */
         $events->listen('Flarum\\Tags\\Event\\DiscussionWasTagged', [$this, 'whenDiscussionChanged']);
         $events->listen('Flarum\\Approval\\Event\\PostWasApproved', [$this, 'whenRevised']);
-        $events->listen('eloquent.saved: ' . Discussion::class, [$this, 'whenDiscussionSaved']);
+        $events->listen('eloquent.saved: '.Discussion::class, [$this, 'whenDiscussionSaved']);
         $events->listen(DiscussionDeleting::class, [$this, 'whenDiscussionDeleting']);
     }
 

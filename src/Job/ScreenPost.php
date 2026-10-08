@@ -3,9 +3,9 @@
 namespace Ernestdefoe\Steward\Job;
 
 use Carbon\Carbon;
+use Ernestdefoe\Steward\Model\Review;
 use Ernestdefoe\Steward\Moderation\Decision;
 use Ernestdefoe\Steward\Moderation\Screener;
-use Ernestdefoe\Steward\Model\Review;
 use Flarum\Post\CommentPost;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -38,9 +38,9 @@ class ScreenPost implements ShouldQueue
         }
 
         $decision = $screener->screen((string) $post->content, [
-            'postCount'      => (int) ($user->comment_count ?? 0),
+            'postCount' => (int) ($user->comment_count ?? 0),
             'accountAgeDays' => $user->joined_at ? $user->joined_at->diffInDays(Carbon::now()) : 999,
-            'isModerator'    => $user->isAdmin() || $user->hasPermission('discussion.hide'),
+            'isModerator' => $user->isAdmin() || $user->hasPermission('discussion.hide'),
         ]);
 
         /*
@@ -58,10 +58,10 @@ class ScreenPost implements ShouldQueue
         Review::query()->updateOrCreate(
             ['post_id' => $post->id],
             [
-                'user_id'    => $user->id,
-                'action'     => $decision->action,
-                'source'     => $decision->source,
-                'reasons'    => json_encode($decision->reasons),
+                'user_id' => $user->id,
+                'action' => $decision->action,
+                'source' => $decision->source,
+                'reasons' => json_encode($decision->reasons),
                 'confidence' => $decision->confidence,
                 'unscreened' => $decision->unscreened,
                 'created_at' => Carbon::now(),

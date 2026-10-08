@@ -50,9 +50,9 @@ class RelayClient
     ) {
         $this->http = $http ?? new Client([
             // Generous but finite. A hung relay must not hold a web request open.
-            'timeout'         => 25,
+            'timeout' => 25,
             'connect_timeout' => 6,
-            'http_errors'     => true,
+            'http_errors' => true,
         ]);
     }
 
@@ -81,20 +81,20 @@ class RelayClient
          * individually healthy under direct testing. Nothing about a path
          * mismatch announces itself.
          */
-        $url = rtrim($this->baseUrl, '/') . self::PREFIX . ltrim($path, '/');
+        $url = rtrim($this->baseUrl, '/').self::PREFIX.ltrim($path, '/');
 
         try {
             $res = $this->http->post($url, [
                 'headers' => array_filter([
-                    'Authorization' => 'Bearer ' . $this->siteKey,
-                    'Accept'        => 'application/json',
-                    'Origin'        => $this->ownUrl !== '' ? rtrim($this->ownUrl, '/') : null,
+                    'Authorization' => 'Bearer '.$this->siteKey,
+                    'Accept' => 'application/json',
+                    'Origin' => $this->ownUrl !== '' ? rtrim($this->ownUrl, '/') : null,
                 ]),
                 'json' => $payload,
             ]);
         } catch (ClientException $e) {
-            $status  = $e->getResponse()->getStatusCode();
-            $quota   = Quota::fromHeaders($e->getResponse()->getHeaders());
+            $status = $e->getResponse()->getStatusCode();
+            $quota = Quota::fromHeaders($e->getResponse()->getHeaders());
 
             /*
              * 🚨 402 and 429 are the allowance, not a fault.
@@ -120,6 +120,7 @@ class RelayClient
             throw new RelayException('The AI service is unavailable.', retryable: true);
         } catch (Throwable $e) {
             $this->log->warning('[steward] relay call failed', ['path' => $path, 'error' => $e->getMessage()]);
+
             throw new RelayException('The AI service could not be reached.', retryable: true);
         }
 

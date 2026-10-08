@@ -56,7 +56,7 @@ class PassageVisibility
         $seenPairs = [];
         foreach ($visible as $post) {
             $seenIds[(int) $post->id] = true;
-            $seenPairs[$post->discussion_id . ':' . $post->number] = true;
+            $seenPairs[$post->discussion_id.':'.$post->number] = true;
         }
 
         return $retrieval->only(function (Passage $p) use ($seenIds, $seenPairs) {
@@ -67,7 +67,7 @@ class PassageVisibility
 
             return $where['post']
                 ? isset($seenIds[$where['post']])
-                : isset($seenPairs[$where['discussion'] . ':' . ($where['number'] ?? 1)]);
+                : isset($seenPairs[$where['discussion'].':'.($where['number'] ?? 1)]);
         });
     }
 

@@ -9,7 +9,7 @@ use Flarum\User\Guest;
 use Illuminate\Contracts\Queue\Queue;
 
 /**
- * php flarum steward:withdraw-restricted
+ * php flarum steward:withdraw-restricted.
  *
  * Removes from the hosted index every post a signed-out visitor cannot read.
  *

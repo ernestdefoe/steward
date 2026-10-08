@@ -69,9 +69,9 @@ class IndexPost implements ShouldQueue
 
         $this->send($relay, $log, [
             'postId' => (int) $post->id,
-            'title'  => (string) $discussion->title,
-            'body'   => strip_tags((string) $post->content),
-            'url'    => '/d/' . $discussion->id . '-' . $discussion->slug . '/' . $post->number,
+            'title' => (string) $discussion->title,
+            'body' => strip_tags((string) $post->content),
+            'url' => '/d/'.$discussion->id.'-'.$discussion->slug.'/'.$post->number,
         ]);
     }
 

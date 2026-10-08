@@ -55,19 +55,19 @@ class PreFilter
             return Verdict::clear();
         }
 
-        $text  = trim($body);
+        $text = trim($body);
         $lower = mb_strtolower($text);
-        $new   = ($author['accountAgeDays'] ?? 999) < $this->newAccountDays;
+        $new = ($author['accountAgeDays'] ?? 999) < $this->newAccountDays;
 
         $reasons = [];
-        $score   = 0.0;
+        $score = 0.0;
 
         // --- link density -------------------------------------------------
         $links = preg_match_all('~https?://~i', $text);
         $words = max(1, str_word_count(strip_tags($text)));
 
         if ($links > 0 && $new) {
-            $reasons[] = "new account posting {$links} link" . ($links === 1 ? '' : 's');
+            $reasons[] = "new account posting {$links} link".($links === 1 ? '' : 's');
             $score += $links >= 3 ? 0.55 : 0.3;
         }
 

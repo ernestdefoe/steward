@@ -18,12 +18,23 @@ class AnswererTest extends TestCase
             public array $data = [];
             public ?RelayException $boom = null;
             public int $calls = 0;
-            public function __construct() {}
-            public function configured(): bool { return true; }
+
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
             public function post(string $path, array $payload): array
             {
                 $this->calls++;
-                if ($this->boom) throw $this->boom;
+                if ($this->boom) {
+                    throw $this->boom;
+                }
+
                 return ['data' => $this->data, 'quota' => new Quota()];
             }
         };
@@ -99,7 +110,7 @@ class AnswererTest extends TestCase
 
     public function testExhaustedAllowanceIsDistinguishableFromAnOutage(): void
     {
-        $out  = (new Answerer($this->relay([], new RelayException('x', exhausted: true))))
+        $out = (new Answerer($this->relay([], new RelayException('x', exhausted: true))))
             ->answer('q', Retrieval::from($this->passages(0.9), 0.62));
         $down = (new Answerer($this->relay([], new RelayException('x', retryable: true))))
             ->answer('q', Retrieval::from($this->passages(0.9), 0.62));

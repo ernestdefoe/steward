@@ -17,11 +17,20 @@ class ScreenerTest extends TestCase
         $stub = new class extends RelayClient {
             public array $data = [];
             public int $calls = 0;
-            public function __construct() {}
-            public function configured(): bool { return true; }
+
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
             public function post(string $path, array $payload): array
             {
                 $this->calls++;
+
                 return ['data' => $this->data, 'quota' => new \Ernestdefoe\Steward\Relay\Quota()];
             }
         };
@@ -35,11 +44,20 @@ class ScreenerTest extends TestCase
         $stub = new class extends RelayClient {
             public ?RelayException $boom = null;
             public int $calls = 0;
-            public function __construct() {}
-            public function configured(): bool { return true; }
+
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
             public function post(string $path, array $payload): array
             {
                 $this->calls++;
+
                 throw $this->boom;
             }
         };

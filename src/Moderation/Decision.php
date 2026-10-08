@@ -16,8 +16,8 @@ namespace Ernestdefoe\Steward\Moderation;
  */
 final class Decision
 {
-    public const ALLOW    = 'allow';
-    public const REVIEW   = 'review';
+    public const ALLOW = 'allow';
+    public const REVIEW = 'review';
     public const GUARDIAN = 'guardian';
 
     private function __construct(

@@ -44,7 +44,7 @@ final class Quota
     /** True once the site is close enough that an admin should be told. */
     public function nearlyOut(float $threshold = 0.1): bool
     {
-        if ($this->remaining === null || !$this->limit) {
+        if ($this->remaining === null || ! $this->limit) {
             return false;
         }
 

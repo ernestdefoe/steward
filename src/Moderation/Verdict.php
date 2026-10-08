@@ -11,9 +11,9 @@ namespace Ernestdefoe\Steward\Moderation;
  */
 final class Verdict
 {
-    public const CLEAR         = 'clear';
-    public const ESCALATE      = 'escalate';   // ask the model
-    public const FLAG          = 'flag';       // certain enough to queue without asking
+    public const CLEAR = 'clear';
+    public const ESCALATE = 'escalate';   // ask the model
+    public const FLAG = 'flag';       // certain enough to queue without asking
 
     private function __construct(
         public readonly string $outcome,

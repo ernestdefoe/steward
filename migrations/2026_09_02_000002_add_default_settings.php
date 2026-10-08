@@ -6,7 +6,7 @@ return Migration::addSettings([
     // Issued by the client area and bound to this domain. No model provider
     // and no API key: which model runs is the relay's decision, because that
     // is what keeps a tier profitable.
-    'steward.site_key'        => '',
+    'steward.site_key' => '',
     /*
      * 🚨 Must be a host that actually resolves, and must stay resolvable
      * forever. This value is written once at INSTALL, so changing it in a later
@@ -18,10 +18,10 @@ return Migration::addSettings([
      * unavailable, which is indistinguishable from an outage and is the first
      * thing they would ever have seen.
      */
-    'steward.relay_url'       => 'https://ernestdefoe.online',
+    'steward.relay_url' => 'https://ernestdefoe.online',
 
-    'steward.moderation'      => '1',
-    'steward.answers'         => '1',
+    'steward.moderation' => '1',
+    'steward.answers' => '1',
 
     // Measured, not guessed. On the live index, genuine questions floored at
     // 0.659 and a nonsense question still matched a real document at 0.576.
@@ -34,12 +34,12 @@ return Migration::addSettings([
      * Fill it in and retrieval runs on this forum's own cluster instead, and
      * its content never leaves.
      */
-    'steward.opensearch_url'   => '',
+    'steward.opensearch_url' => '',
     'steward.opensearch_index' => '',
     'steward.opensearch_model' => '',
-    'steward.opensearch_user'  => '',
-    'steward.opensearch_pass'  => '',
+    'steward.opensearch_user' => '',
+    'steward.opensearch_pass' => '',
 
-    'steward.trusted_posts'   => '25',
+    'steward.trusted_posts' => '25',
     'steward.new_account_days' => '7',
 ]);

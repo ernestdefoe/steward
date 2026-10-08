@@ -40,7 +40,7 @@ class PreFilterTest extends TestCase
     public function testOrdinaryNewMemberPostIsClear(): void
     {
         $body = 'Thanks for the reply. I tried clearing the cache and it worked, '
-              . 'so I think the issue was the stale assets rather than the config.';
+              .'so I think the issue was the stale assets rather than the config.';
 
         $v = $this->filter->screen($body, $this->author(posts: 1, ageDays: 2));
         $this->assertSame(Verdict::CLEAR, $v->outcome, 'a normal post must not be escalated');
@@ -108,7 +108,9 @@ class PreFilterTest extends TestCase
         $escalated = 0;
         foreach ($corpus as [$body, $posts, $age]) {
             $v = $this->filter->screen($body, $this->author(posts: $posts, ageDays: $age));
-            if ($v->costsMoney()) $escalated++;
+            if ($v->costsMoney()) {
+                $escalated++;
+            }
         }
 
         $rate = $escalated / count($corpus);

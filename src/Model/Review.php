@@ -43,9 +43,9 @@ class Review extends AbstractModel
     protected $guarded = [];
 
     protected $casts = [
-        'confidence'  => 'float',
-        'unscreened'  => 'bool',
-        'created_at'  => 'datetime',
+        'confidence' => 'float',
+        'unscreened' => 'bool',
+        'created_at' => 'datetime',
         'resolved_at' => 'datetime',
     ];
 

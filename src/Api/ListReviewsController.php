@@ -39,27 +39,27 @@ class ListReviewsController implements RequestHandlerInterface
          */
         match ($filter) {
             'unscreened' => $query->where('unscreened', true),
-            'resolved'   => $query->whereNotNull('resolution'),
-            default      => $query->whereNull('resolution')->where('unscreened', false),
+            'resolved' => $query->whereNotNull('resolution'),
+            default => $query->whereNull('resolution')->where('unscreened', false),
         };
 
         return new JsonResponse([
             'reviews' => $query->get()->map(fn (Review $r) => [
-                'id'         => (int) $r->id,
-                'postId'     => (int) $r->post_id,
-                'action'     => $r->action,
-                'source'     => $r->source,
-                'reasons'    => $r->reasonList(),
+                'id' => (int) $r->id,
+                'postId' => (int) $r->post_id,
+                'action' => $r->action,
+                'source' => $r->source,
+                'reasons' => $r->reasonList(),
                 'confidence' => (float) $r->confidence,
                 'unscreened' => (bool) $r->unscreened,
                 'resolution' => $r->resolution,
-                'createdAt'  => $r->created_at?->toIso8601String(),
-                'author'     => $r->user?->display_name,
-                'excerpt'    => $this->excerpt($r),
-                'url'        => $this->url($r),
+                'createdAt' => $r->created_at?->toIso8601String(),
+                'author' => $r->user?->display_name,
+                'excerpt' => $this->excerpt($r),
+                'url' => $this->url($r),
             ])->values()->all(),
             'counts' => [
-                'open'       => Review::query()->whereNull('resolution')->where('unscreened', false)->count(),
+                'open' => Review::query()->whereNull('resolution')->where('unscreened', false)->count(),
                 'unscreened' => Review::query()->where('unscreened', true)->whereNull('resolution')->count(),
             ],
         ]);
@@ -77,6 +77,6 @@ class ListReviewsController implements RequestHandlerInterface
     {
         $d = $r->post?->discussion;
 
-        return $d ? '/d/' . $d->id . '-' . $d->slug . '/' . $r->post->number : null;
+        return $d ? '/d/'.$d->id.'-'.$d->slug.'/'.$r->post->number : null;
     }
 }

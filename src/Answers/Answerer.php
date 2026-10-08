@@ -49,8 +49,8 @@ class Answerer
         if (! $retrieval->deferred) {
             $payload['passages'] = array_map(fn (Passage $p) => [
                 'title' => $p->title,
-                'text'  => mb_substr($p->text, 0, 2000),
-                'url'   => $p->url,
+                'text' => mb_substr($p->text, 0, 2000),
+                'url' => $p->url,
             ], $retrieval->passages);
         }
 

@@ -13,7 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * POST /api/steward/reviews/{id}/resolve
+ * POST /api/steward/reviews/{id}/resolve.
  *
  * 🚨 Resolving records a human's decision; it does not act on the post.
  *
@@ -41,7 +41,7 @@ class ResolveReviewController implements RequestHandlerInterface
         /** @var Review $review */
         $review = Review::query()->findOrFail($id);
 
-        $review->resolution  = $resolution;
+        $review->resolution = $resolution;
         $review->resolved_by = $actor->id;
         $review->resolved_at = Carbon::now();
         $review->save();
