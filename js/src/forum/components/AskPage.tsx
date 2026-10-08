@@ -7,7 +7,10 @@ declare const m: any;
 
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-steward.forum.ask.' + k, p);
 
-interface Source { title: string; url: string }
+interface Source {
+  title: string;
+  url: string;
+}
 
 export default class AskPage extends Page {
   question = '';
@@ -34,7 +37,12 @@ export default class AskPage extends Page {
         method: 'POST',
         url: app.forum.attribute('apiUrl') + '/steward/ask',
         body: { question: q },
-        errorHandler: () => { this.asking = false; this.miss = 'unavailable'; m.redraw(); return false as const; },
+        errorHandler: () => {
+          this.asking = false;
+          this.miss = 'unavailable';
+          m.redraw();
+          return false as const;
+        },
       })
       .then(
         (res) => {
@@ -63,33 +71,39 @@ export default class AskPage extends Page {
               className="FormControl StewardAsk-input"
               placeholder={t('placeholder')}
               value={this.question}
-              oninput={(e: any) => { this.question = e.target.value; e.redraw = false; }}
+              oninput={(e: any) => {
+                this.question = e.target.value;
+                e.redraw = false;
+              }}
               disabled={this.asking}
             />
-            {Button.component(
-              { className: 'Button Button--primary', type: 'submit', loading: this.asking, disabled: this.asking },
-              t('ask')
-            )}
+            {Button.component({ className: 'Button Button--primary', type: 'submit', loading: this.asking, disabled: this.asking }, t('ask'))}
           </form>
 
-          {this.asking && <div className="StewardAsk-thinking"><LoadingIndicator display="inline" size="small" /> {t('thinking')}</div>}
+          {this.asking && (
+            <div className="StewardAsk-thinking">
+              <LoadingIndicator display="inline" size="small" /> {t('thinking')}
+            </div>
+          )}
 
           {this.answer && (
             <div className="StewardAsk-answer">
               <div className="StewardAsk-text">{this.answer}</div>
 
               {/*
-                * 🚨 Sources are always shown, never optional. The answer is
-                * assembled from this forum's own posts, and a member should be
-                * able to go and check it rather than take it on trust — an
-                * uncited answer is indistinguishable from one that was made up.
-                */}
+               * 🚨 Sources are always shown, never optional. The answer is
+               * assembled from this forum's own posts, and a member should be
+               * able to go and check it rather than take it on trust — an
+               * uncited answer is indistinguishable from one that was made up.
+               */}
               {this.sources.length > 0 && (
                 <div className="StewardAsk-sources">
                   <div className="StewardAsk-sourcesLabel">{t('sources')}</div>
                   <ul>
                     {this.sources.map((s) => (
-                      <li><a href={s.url}>{s.title || s.url}</a></li>
+                      <li>
+                        <a href={s.url}>{s.title || s.url}</a>
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -100,15 +114,11 @@ export default class AskPage extends Page {
           )}
 
           {/*
-            * A miss is said plainly and differently from a fault. "I could not
-            * find that" is a real answer; pretending otherwise is how these
-            * things lose trust.
-            */}
-          {this.miss && (
-            <div className="StewardAsk-miss">
-              {t('miss_' + this.miss)}
-            </div>
-          )}
+           * A miss is said plainly and differently from a fault. "I could not
+           * find that" is a real answer; pretending otherwise is how these
+           * things lose trust.
+           */}
+          {this.miss && <div className="StewardAsk-miss">{t('miss_' + this.miss)}</div>}
         </div>
       </div>
     );

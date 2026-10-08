@@ -8,10 +8,18 @@ declare const m: any;
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-steward.forum.queue.' + k, p);
 
 interface Review {
-  id: number; postId: number; action: string; source: string;
-  reasons: string[]; confidence: number; unscreened: boolean;
-  resolution: string | null; createdAt: string | null;
-  author: string | null; excerpt: string; url: string | null;
+  id: number;
+  postId: number;
+  action: string;
+  source: string;
+  reasons: string[];
+  confidence: number;
+  unscreened: boolean;
+  resolution: string | null;
+  createdAt: string | null;
+  author: string | null;
+  excerpt: string;
+  url: string | null;
 }
 
 export default class ReviewQueuePage extends Page {
@@ -65,8 +73,14 @@ export default class ReviewQueuePage extends Page {
         body: { resolution },
       })
       .then(
-        () => { this.busy = null; this.load(); },
-        () => { this.busy = null; m.redraw(); }
+        () => {
+          this.busy = null;
+          this.load();
+        },
+        () => {
+          this.busy = null;
+          m.redraw();
+        }
       );
   }
 
@@ -80,15 +94,20 @@ export default class ReviewQueuePage extends Page {
           </header>
 
           <nav className="StewardQueue-tabs">
-            {([
-              ['open', t('tab_open', { n: this.counts.open })],
-              ['unscreened', t('tab_unscreened', { n: this.counts.unscreened })],
-              ['resolved', t('tab_resolved')],
-            ] as const).map(([key, label]) => (
+            {(
+              [
+                ['open', t('tab_open', { n: this.counts.open })],
+                ['unscreened', t('tab_unscreened', { n: this.counts.unscreened })],
+                ['resolved', t('tab_resolved')],
+              ] as const
+            ).map(([key, label]) => (
               <button
                 type="button"
                 className={'StewardQueue-tab' + (this.filter === key ? ' is-on' : '')}
-                onclick={() => { this.filter = key as any; this.load(); }}
+                onclick={() => {
+                  this.filter = key as any;
+                  this.load();
+                }}
               >
                 {label}
               </button>
@@ -96,34 +115,26 @@ export default class ReviewQueuePage extends Page {
           </nav>
 
           {/*
-            * 🚨 The unscreened tab explains itself.
-            *
-            * These posts are not suspicious — they went through without being
-            * looked at, because the allowance ran out or the service was down.
-            * Without saying so, a moderator reads them as accusations and
-            * either panics or learns to ignore the whole queue.
-            */}
-          {this.filter === 'unscreened' && (
-            <div className="StewardQueue-note">{t('unscreened_explainer')}</div>
-          )}
+           * 🚨 The unscreened tab explains itself.
+           *
+           * These posts are not suspicious — they went through without being
+           * looked at, because the allowance ran out or the service was down.
+           * Without saying so, a moderator reads them as accusations and
+           * either panics or learns to ignore the whole queue.
+           */}
+          {this.filter === 'unscreened' && <div className="StewardQueue-note">{t('unscreened_explainer')}</div>}
 
           {this.loading && <LoadingIndicator />}
           {this.error && <div className="StewardQueue-error">{this.error}</div>}
 
-          {!this.loading && !this.error && this.reviews.length === 0 && (
-            <div className="StewardQueue-empty">{t('empty_' + this.filter)}</div>
-          )}
+          {!this.loading && !this.error && this.reviews.length === 0 && <div className="StewardQueue-empty">{t('empty_' + this.filter)}</div>}
 
           {!this.loading &&
             this.reviews.map((r) => (
               <article className={'StewardCard' + (r.unscreened ? ' StewardCard--unscreened' : '')}>
                 <div className="StewardCard-head">
                   <span className="StewardCard-who">{r.author || t('someone')}</span>
-                  {r.action === 'guardian' && (
-                    <span className="StewardCard-badge StewardCard-badge--guardian">
-                      {t('guardian')}
-                    </span>
-                  )}
+                  {r.action === 'guardian' && <span className="StewardCard-badge StewardCard-badge--guardian">{t('guardian')}</span>}
                   <span className="StewardCard-source">{t('by_' + r.source)}</span>
                 </div>
 
@@ -153,9 +164,7 @@ export default class ReviewQueuePage extends Page {
                         t('resolve_' + res)
                       )
                     )}
-                  {r.resolution && (
-                    <span className="StewardCard-resolved">{t('was_' + r.resolution)}</span>
-                  )}
+                  {r.resolution && <span className="StewardCard-resolved">{t('was_' + r.resolution)}</span>}
                 </div>
               </article>
             ))}

@@ -31,16 +31,27 @@ export default class UsagePanel extends Component {
   oninit(vnode: any) {
     super.oninit(vnode);
 
-    app
-      .request<Usage>({ method: 'GET', url: app.forum.attribute('apiUrl') + '/steward/usage' })
-      .then(
-        (res) => { this.usage = res; this.loading = false; m.redraw(); },
-        () => { this.usage = { connected: false }; this.loading = false; m.redraw(); }
-      );
+    app.request<Usage>({ method: 'GET', url: app.forum.attribute('apiUrl') + '/steward/usage' }).then(
+      (res) => {
+        this.usage = res;
+        this.loading = false;
+        m.redraw();
+      },
+      () => {
+        this.usage = { connected: false };
+        this.loading = false;
+        m.redraw();
+      }
+    );
   }
 
   view() {
-    if (this.loading) return <div className="StewardUsage"><LoadingIndicator /></div>;
+    if (this.loading)
+      return (
+        <div className="StewardUsage">
+          <LoadingIndicator />
+        </div>
+      );
 
     const u = this.usage!;
 
@@ -107,9 +118,7 @@ export default class UsagePanel extends Component {
       <div className="StewardUsage-meter">
         <div className="StewardUsage-meterHead">
           <span>{label}</span>
-          <span className={low ? 'is-low' : ''}>
-            {t('left', { n: (m2.remaining ?? 0).toLocaleString(), total: m2.limit.toLocaleString() })}
-          </span>
+          <span className={low ? 'is-low' : ''}>{t('left', { n: (m2.remaining ?? 0).toLocaleString(), total: m2.limit.toLocaleString() })}</span>
         </div>
         <div className="StewardUsage-track">
           <div className={'StewardUsage-fill' + (low ? ' is-low' : '')} style={{ width: pct + '%' }} />
