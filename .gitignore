@@ -2,3 +2,6 @@
 /js/node_modules/
 /.phpunit.cache/
 composer.lock
+.phpunit.result.cache
+/tests/integration/tmp
+/js/coverage-ts
