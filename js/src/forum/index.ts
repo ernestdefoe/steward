@@ -1,6 +1,6 @@
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import IndexPage from 'flarum/forum/components/IndexPage';
+import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
 import AskPage from './components/AskPage';
 import ReviewQueuePage from './components/ReviewQueuePage';
@@ -12,16 +12,16 @@ app.initializers.add('ernestdefoe/steward', () => {
   app.routes['steward.queue'] = { path: '/moderation/queue', component: ReviewQueuePage };
   app.routes['steward.ask'] = { path: '/ask', component: AskPage };
 
-  extend(IndexPage.prototype, 'navItems', function (items: any) {
-    /*
-     * 🚨 Only for people who can act on it. A queue link shown to everyone is
-     * either a permission error waiting to happen or an invitation to a page
-     * that will refuse them.
-     */
-    if (!app.session.user || !app.forum.attribute('canReviewSteward')) return;
+  /*
+   * 🚨 IndexSidebar, not IndexPage: Flarum 2 moved the nav items there, and an
+   * extend() of a method that no longer exists adds one nobody calls — neither
+   * link was ever shown.
+   */
+  extend(IndexSidebar.prototype, 'navItems', function (items: any) {
+    if (!app.session.user) return;
 
     // Asking is for members; the queue is for whoever moderates.
-    if (app.session.user && app.forum.attribute('stewardAnswers')) {
+    if (app.forum.attribute('stewardAnswers')) {
       items.add(
         'steward-ask',
         LinkButton.component(
@@ -31,6 +31,13 @@ app.initializers.add('ernestdefoe/steward', () => {
         -9
       );
     }
+
+    /*
+     * 🚨 Only for people who can act on it. A queue link shown to everyone is
+     * either a permission error waiting to happen or an invitation to a page
+     * that will refuse them.
+     */
+    if (!app.forum.attribute('canReviewSteward')) return;
 
     items.add(
       'steward-queue',
