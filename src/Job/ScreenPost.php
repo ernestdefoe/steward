@@ -7,6 +7,7 @@ use Ernestdefoe\Steward\Model\Review;
 use Ernestdefoe\Steward\Moderation\Decision;
 use Ernestdefoe\Steward\Moderation\Screener;
 use Flarum\Post\CommentPost;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,7 +15,9 @@ use Psr\Log\LoggerInterface;
 
 class ScreenPost implements ShouldQueue
 {
-    use InteractsWithQueue;
+    // Queueable carries $queue, which the queue reads when it pushes the job
+    // (fof/horizon warned "Undefined property ...::$queue" on every push).
+    use Queueable, InteractsWithQueue;
 
     public function __construct(private int $postId)
     {

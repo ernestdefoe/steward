@@ -6,6 +6,7 @@ use Ernestdefoe\Steward\Relay\RelayClient;
 use Ernestdefoe\Steward\Relay\RelayException;
 use Flarum\Post\CommentPost;
 use Flarum\User\Guest;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Psr\Log\LoggerInterface;
@@ -20,7 +21,9 @@ use Psr\Log\LoggerInterface;
  */
 class IndexPost implements ShouldQueue
 {
-    use InteractsWithQueue;
+    // Queueable carries $queue, which the queue reads when it pushes the job
+    // (fof/horizon warned "Undefined property ...::$queue" on every push).
+    use Queueable, InteractsWithQueue;
 
     public function __construct(
         private int $postId,
