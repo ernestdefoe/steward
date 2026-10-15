@@ -68,7 +68,7 @@ class ScreenerTest extends TestCase
 
     private function screener(RelayClient $relay): Screener
     {
-        return new Screener(new PreFilter(), $relay, new NullLogger());
+        return new Screener(new PreFilter(translator: TestTranslator::make()), $relay, new NullLogger(), TestTranslator::make());
     }
 
     private function author(int $posts = 0, int $age = 1, bool $mod = false): array

@@ -2,6 +2,8 @@
 
 namespace Ernestdefoe\Steward\Moderation;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 /**
  * Decides which posts are worth spending a model call on.
  *
@@ -35,7 +37,21 @@ class PreFilter
     public function __construct(
         private int $trustedPosts = 25,
         private int $newAccountDays = 7,
+        private ?TranslatorInterface $translator = null,
     ) {
+    }
+
+    /**
+     * A reason in the forum's language — it is stored with the review and read
+     * by a moderator.
+     *
+     * @param array<string, mixed> $params
+     */
+    private function reason(string $key, array $params = []): string
+    {
+        $this->translator ??= resolve(TranslatorInterface::class);
+
+        return $this->translator->trans('ernestdefoe-steward.api.reasons.'.$key, $params);
     }
 
     /**
@@ -67,13 +83,13 @@ class PreFilter
         $words = max(1, str_word_count(strip_tags($text)));
 
         if ($links > 0 && $new) {
-            $reasons[] = "new account posting {$links} link".($links === 1 ? '' : 's');
+            $reasons[] = $this->reason('new_account_links', ['count' => $links]);
             $score += $links >= 3 ? 0.55 : 0.3;
         }
 
         // A wall that is mostly URL is the classic drive-by.
         if ($links >= 2 && $words < 25) {
-            $reasons[] = 'links with almost no text around them';
+            $reasons[] = $this->reason('bare_links');
             $score += 0.4;
         }
 
@@ -83,20 +99,20 @@ class PreFilter
             $upper = preg_replace('/[^A-Z]/', '', $text);
             $ratio = mb_strlen($upper) / mb_strlen($letters);
             if ($ratio > 0.7) {
-                $reasons[] = 'almost entirely capitals';
+                $reasons[] = $this->reason('capitals');
                 $score += 0.25;
             }
         }
 
         // --- repetition -----------------------------------------------------
         if (preg_match('/(.{6,})\1{2,}/su', $text)) {
-            $reasons[] = 'the same phrase repeated over and over';
+            $reasons[] = $this->reason('repetition');
             $score += 0.45;
         }
 
         // --- contact-details bait ------------------------------------------
         if ($new && preg_match('/\b(whats ?app|telegram|t\.me\/|wechat|\+\d{8,})\b/i', $lower)) {
-            $reasons[] = 'new account sharing off-site contact details';
+            $reasons[] = $this->reason('contact_details');
             $score += 0.5;
         }
 
@@ -123,7 +139,7 @@ class PreFilter
          * else is.
          */
         if ($new && $words <= 3 && $links === 0) {
-            return Verdict::escalate(['first posts, almost no content']);
+            return Verdict::escalate([$this->reason('almost_no_content')]);
         }
 
         return Verdict::clear();

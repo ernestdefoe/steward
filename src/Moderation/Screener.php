@@ -5,6 +5,7 @@ namespace Ernestdefoe\Steward\Moderation;
 use Ernestdefoe\Steward\Relay\RelayClient;
 use Ernestdefoe\Steward\Relay\RelayException;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * The paid half of moderation: asks the model about posts the cheap pass could
@@ -18,6 +19,7 @@ class Screener
         private PreFilter $preFilter,
         private RelayClient $relay,
         private LoggerInterface $log,
+        private ?TranslatorInterface $translator = null,
     ) {
     }
 
@@ -61,9 +63,7 @@ class Screener
             ]);
 
             return Decision::allow(
-                $e->exhausted
-                    ? 'allowance used up — not screened'
-                    : 'screening unavailable — not screened',
+                $this->unscreened($e->exhausted ? 'allowance_used' : 'unavailable'),
                 unscreened: true
             );
         }
@@ -98,5 +98,13 @@ class Screener
             'review', 'unsure' => Decision::review($reasons, 'model', 0.5),
             default => Decision::allow('the model saw nothing wrong'),
         };
+    }
+
+    /** Why a post went through unchecked, in the forum's language — a moderator reads it. */
+    private function unscreened(string $key): string
+    {
+        $this->translator ??= resolve(TranslatorInterface::class);
+
+        return $this->translator->trans('ernestdefoe-steward.api.reasons.unscreened_'.$key);
     }
 }

@@ -12,7 +12,7 @@ class PreFilterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->filter = new PreFilter();
+        $this->filter = new PreFilter(translator: TestTranslator::make());
     }
 
     private function author(int $posts = 0, int $ageDays = 1, bool $mod = false): array

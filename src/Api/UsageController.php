@@ -5,6 +5,7 @@ namespace Ernestdefoe\Steward\Api;
 use Ernestdefoe\Steward\Relay\RelayClient;
 use Ernestdefoe\Steward\Relay\RelayException;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,7 +22,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 class UsageController implements RequestHandlerInterface
 {
     public function __construct(
-        private RelayClient $relay
+        private RelayClient $relay,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -38,7 +40,7 @@ class UsageController implements RequestHandlerInterface
         } catch (RelayException $e) {
             return new JsonResponse([
                 'connected' => false,
-                'error' => $e->getMessage(),
+                'error' => $this->translator->trans('ernestdefoe-steward.api.relay.'.$e->reason),
             ], 200);
         }
 

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Ernestdefoe\Steward\Model\Review;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -26,6 +27,11 @@ class ResolveReviewController implements RequestHandlerInterface
 {
     private const ALLOWED = ['kept', 'removed', 'ignored'];
 
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -35,7 +41,7 @@ class ResolveReviewController implements RequestHandlerInterface
         $resolution = (string) Arr::get((array) $request->getParsedBody(), 'resolution');
 
         if (! in_array($resolution, self::ALLOWED, true)) {
-            throw new ValidationException(['resolution' => 'Unknown resolution.']);
+            throw new ValidationException(['resolution' => $this->translator->trans('ernestdefoe-steward.api.unknown_resolution')]);
         }
 
         /** @var Review $review */

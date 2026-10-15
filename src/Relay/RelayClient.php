@@ -68,7 +68,7 @@ class RelayClient
     public function post(string $path, array $payload): array
     {
         if (! $this->configured()) {
-            throw new RelayException('Steward is not connected — no site key.');
+            throw new RelayException('Steward is not connected — no site key.', reason: 'not_connected');
         }
 
         /*
@@ -105,19 +105,20 @@ class RelayClient
              * IS an admin problem and is not retryable.
              */
             if ($status === 402 || $status === 429) {
-                throw new RelayException('Allowance used up for this period.', exhausted: true, quota: $quota);
+                throw new RelayException('Allowance used up for this period.', exhausted: true, quota: $quota, reason: 'exhausted');
             }
 
             throw new RelayException(
                 $status === 401 || $status === 403
                     ? 'This site key was rejected. It may have been revoked or bound to another domain.'
                     : 'The AI service refused the request.',
-                quota: $quota
+                quota: $quota,
+                reason: $status === 401 || $status === 403 ? 'key_rejected' : 'refused'
             );
         } catch (ServerException|ConnectException $e) {
             // Their side, or the network. Worth trying again later; never worth
             // showing to a member.
-            throw new RelayException('The AI service is unavailable.', retryable: true);
+            throw new RelayException('The AI service is unavailable.', retryable: true, reason: 'unavailable');
         } catch (Throwable $e) {
             $this->log->warning('[steward] relay call failed', ['path' => $path, 'error' => $e->getMessage()]);
 
@@ -127,7 +128,7 @@ class RelayClient
         $body = json_decode((string) $res->getBody(), true);
 
         if (! is_array($body)) {
-            throw new RelayException('The AI service returned something unreadable.');
+            throw new RelayException('The AI service returned something unreadable.', reason: 'unreadable');
         }
 
         return ['data' => $body, 'quota' => Quota::fromHeaders($res->getHeaders())];

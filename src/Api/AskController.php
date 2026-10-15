@@ -8,6 +8,7 @@ use Ernestdefoe\Steward\Answers\PassageVisibility;
 use Ernestdefoe\Steward\Answers\RetrievalProvider;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -25,6 +26,7 @@ class AskController implements RequestHandlerInterface
         private Answerer $answerer,
         private SettingsRepositoryInterface $settings,
         private PassageVisibility $visibility,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -44,13 +46,13 @@ class AskController implements RequestHandlerInterface
         $actor->assertRegistered();
 
         if (! (bool) $this->settings->get('steward.answers')) {
-            throw new ValidationException(['question' => 'Answers are switched off on this forum.']);
+            throw new ValidationException(['question' => $this->translator->trans('ernestdefoe-steward.api.answers_off')]);
         }
 
         $question = trim((string) Arr::get((array) $request->getParsedBody(), 'question', ''));
 
         if ($question === '') {
-            throw new ValidationException(['question' => 'Ask a question first.']);
+            throw new ValidationException(['question' => $this->translator->trans('ernestdefoe-steward.api.ask_first')]);
         }
 
         /*
