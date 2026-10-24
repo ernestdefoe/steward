@@ -53,6 +53,8 @@ class IndexPost implements ShouldQueue
         /** @var CommentPost|null $post */
         $post = CommentPost::query()
             ->whereVisibleTo(new Guest())
+            // CommentPost does not narrow by type: a rename would be sent as "Array".
+            ->where('posts.type', 'comment')
             ->with('discussion')
             ->find($this->postId);
 

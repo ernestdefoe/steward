@@ -88,7 +88,7 @@ class ScreenNewPosts
             return;
         }
 
-        $ids = CommentPost::query()->where('discussion_id', $discussion->id)->pluck('id');
+        $ids = CommentPost::query()->where('discussion_id', $discussion->id)->where('type', 'comment')->pluck('id');
 
         foreach ($ids as $id) {
             $this->queue->push(new IndexPost((int) $id, withdraw: $withdraw));
