@@ -18,6 +18,7 @@ class AnswererTest extends TestCase
             public array $data = [];
             public ?RelayException $boom = null;
             public int $calls = 0;
+            public array $payload = [];
 
             public function __construct()
             {
@@ -31,6 +32,7 @@ class AnswererTest extends TestCase
             public function post(string $path, array $payload): array
             {
                 $this->calls++;
+                $this->payload = $payload;
                 if ($this->boom) {
                     throw $this->boom;
                 }
@@ -119,5 +121,37 @@ class AnswererTest extends TestCase
         $this->assertTrue($out->exhausted, 'running out must be tellable from breaking');
         $this->assertTrue($down->unavailable);
         $this->assertFalse($down->exhausted);
+    }
+
+    /**
+     * Hosted mode: the relay retrieves, so it must be told the forum's own
+     * threshold and must hand back what it answered from.
+     */
+    public function testHostedAnswerSendsTheThresholdAndIsCited(): void
+    {
+        $relay = $this->relay([
+            'answered' => true,
+            'answer' => 'Add a passkey.',
+            'sources' => [
+                ['title' => 'Passkeys', 'url' => '/d/1-passkeys/1', 'postId' => 1, 'score' => 0.8],
+                ['title' => 'No link'],
+            ],
+        ]);
+        $a = (new Answerer($relay))->answer('how do I sign in', Retrieval::deferred(0.7));
+
+        $this->assertTrue($a->answered);
+        $this->assertSame(0.7, $relay->payload['threshold']);
+        $this->assertArrayNotHasKey('passages', $relay->payload);
+        $this->assertCount(1, $a->sources, 'a source with no link is not a citation');
+        $this->assertSame('/d/1-passkeys/1', $a->sources[0]->url);
+        $this->assertSame(1, $a->sources[0]->postId);
+    }
+
+    public function testLocalModeDoesNotSendAThreshold(): void
+    {
+        $relay = $this->relay(['answer' => 'ok']);
+        (new Answerer($relay))->answer('q', Retrieval::from($this->passages(0.9), 0.62));
+
+        $this->assertArrayNotHasKey('threshold', $relay->payload);
     }
 }

@@ -65,9 +65,18 @@ final class Retrieval
         return new self([], false, 0.0);
     }
 
-    /** Hosted mode: the relay holds the index and will retrieve for itself. */
-    public static function deferred(): self
+    /**
+     * Hosted mode: the relay holds the index and will retrieve for itself,
+     * judging what it finds against this same threshold.
+     */
+    public static function deferred(float $threshold = 0.0): self
     {
-        return new self([], true, 0.0, deferred: true);
+        return new self([], true, 0.0, deferred: true, threshold: $threshold);
+    }
+
+    /** The confidence floor this retrieval is judged by, in either mode. */
+    public function threshold(): float
+    {
+        return $this->threshold;
     }
 }

@@ -82,6 +82,47 @@ class AskTest extends TestCase
         $container->instance(Answerer::class, new Answerer($relay));
     }
 
+    /** Hosted mode: the relay retrieves and returns its own sources. */
+    private function fakeHosted(): void
+    {
+        $container = $this->app()->getContainer();
+        $container->instance(RetrievalProvider::class, new \Ernestdefoe\Steward\Answers\HostedRetrieval(0.7));
+
+        $relay = new class extends RelayClient {
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
+            public function post(string $path, array $payload): array
+            {
+                AskTest::$sent[] = $payload;
+
+                return ['data' => ['answer' => 'Use a passkey.', 'answered' => true, 'sources' => [
+                    ['title' => 'Passkeys', 'url' => '/d/1-passkeys/1', 'postId' => 1],
+                    ['title' => 'Staff only', 'url' => '/d/2-staff-only/1', 'postId' => 2],
+                ]]];
+            }
+        };
+        $container->instance(Answerer::class, new Answerer($relay));
+    }
+
+    #[Test]
+    public function a_hosted_answer_lists_its_sources_and_sends_the_threshold()
+    {
+        $this->fakeHosted();
+
+        [$status, $body] = $this->ask(2);
+
+        $this->assertSame(200, $status, json_encode($body));
+        $this->assertSame([['title' => 'Passkeys', 'url' => '/d/1-passkeys/1']], $body['sources'], 'Cited, but not the hidden discussion');
+        $this->assertSame(0.7, self::$sent[0]['threshold']);
+    }
+
     private bool $cacheCleared = false;
 
     private function ask(?int $actor, string $question = 'How do I sign in?'): array

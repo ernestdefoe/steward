@@ -46,7 +46,10 @@ class Answerer
          */
         $payload = ['question' => mb_substr($question, 0, 2000)];
 
-        if (! $retrieval->deferred) {
+        if ($retrieval->deferred) {
+            // The relay applies the forum's own threshold to what it retrieves.
+            $payload['threshold'] = $retrieval->threshold();
+        } else {
             $payload['passages'] = array_map(fn (Passage $p) => [
                 'title' => $p->title,
                 'text' => mb_substr($p->text, 0, 2000),
@@ -74,6 +77,29 @@ class Answerer
             return Answer::dontKnow($retrieval->topScore);
         }
 
-        return Answer::found($text, $retrieval->passages);
+        /*
+         * 🚨 Hosted answers are cited too. The relay retrieved the passages, so
+         * it returns where they came from; locally we already hold them.
+         */
+        return Answer::found($text, $retrieval->deferred ? self::sources($res['data']['sources'] ?? []) : $retrieval->passages);
+    }
+
+    /** @return list<Passage> */
+    private static function sources(mixed $raw): array
+    {
+        $out = [];
+        foreach (is_array($raw) ? $raw : [] as $s) {
+            if (is_array($s) && ($url = (string) ($s['url'] ?? '')) !== '') {
+                $out[] = new Passage(
+                    (string) ($s['title'] ?? ''),
+                    '',
+                    $url,
+                    (float) ($s['score'] ?? 0),
+                    isset($s['postId']) && is_numeric($s['postId']) ? (int) $s['postId'] : null,
+                );
+            }
+        }
+
+        return $out;
     }
 }

@@ -69,9 +69,10 @@ class StewardServiceProvider extends AbstractServiceProvider
         $this->container->singleton(RetrievalProvider::class, function ($c) {
             $settings = $c->make(SettingsRepositoryInterface::class);
             $url = (string) $settings->get('steward.opensearch_url');
+            $threshold = (float) ($settings->get('steward.answer_threshold') ?: 0.62);
 
             if ($url === '') {
-                return new HostedRetrieval();
+                return new HostedRetrieval($threshold);
             }
 
             return new LocalRetrieval(
@@ -80,7 +81,7 @@ class StewardServiceProvider extends AbstractServiceProvider
                 (string) $settings->get('steward.opensearch_model'),
                 (string) $settings->get('steward.opensearch_user'),
                 (string) $settings->get('steward.opensearch_pass'),
-                (float) ($settings->get('steward.answer_threshold') ?: 0.62),
+                $threshold,
                 $c->make(LoggerInterface::class),
             );
         });

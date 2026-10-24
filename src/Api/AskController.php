@@ -5,6 +5,7 @@ namespace Ernestdefoe\Steward\Api;
 use Ernestdefoe\Steward\Answers\Answerer;
 use Ernestdefoe\Steward\Answers\Passage;
 use Ernestdefoe\Steward\Answers\PassageVisibility;
+use Ernestdefoe\Steward\Answers\Retrieval;
 use Ernestdefoe\Steward\Answers\RetrievalProvider;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
@@ -81,6 +82,17 @@ class AskController implements RequestHandlerInterface
             return new JsonResponse(['answered' => false, 'reason' => 'not_found']);
         }
 
+        $sources = $answer->sources;
+
+        /*
+         * Hosted sources arrive with the answer, so they are checked against
+         * this member now. The hosted index holds only public posts, but a post
+         * made private a moment ago may not have been withdrawn yet.
+         */
+        if ($retrieval->deferred && $sources !== []) {
+            $sources = $this->visibility->restrict(Retrieval::from($sources, 0.0), $actor)->passages;
+        }
+
         return new JsonResponse([
             'answered' => true,
             'answer' => $answer->text,
@@ -89,7 +101,7 @@ class AskController implements RequestHandlerInterface
             'sources' => array_map(fn (Passage $p) => [
                 'title' => $p->title,
                 'url' => $p->url,
-            ], $answer->sources),
+            ], $sources),
         ]);
     }
 }
