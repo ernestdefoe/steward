@@ -17,8 +17,9 @@ adds moderation.
 ### Answers, with sources
 
 A member asks a question and gets an answer assembled from discussions already
-on your site — with **every source cited**, so it can be checked rather than
-trusted.
+on your site — with **every source cited** under "Answered from", so it can be
+checked rather than trusted. Sources are listed on hosted retrieval and on your
+own OpenSearch alike, and only ones the member asking could open on the forum.
 
 When nothing on the forum answers the question it says so. It does not reach out
 to the wider internet, and it does not invent something plausible to fill the
@@ -76,7 +77,7 @@ Admin → Steward:
 - **Screen new posts:** moderation on or off.
 - **Answer questions from your forum:** the Ask page on or off.
 - **Trust members after this many posts:** members past this count are never screened. 25 by default.
-- **Answer confidence threshold:** below this, Steward says it does not know rather than answering from a weak match. 0.62 by default, which suits most forums.
+- **Answer confidence threshold:** below this, Steward says it does not know rather than answering from a weak match. It applies to every answer, whether retrieval runs on the hosted index or your own OpenSearch. 0.62 by default, which suits most forums.
 
 Your usage panel sits at the top of the same page once the key is in.
 
@@ -92,6 +93,18 @@ php flarum cache:clear
 
 Enable it, then paste your site key into its settings. The key is bound to one
 domain and re-checked on every request, so it cannot be used anywhere else.
+
+New, edited and restored posts are indexed as they happen. To make the posts
+already on your forum answerable too, send them once:
+
+```bash
+php flarum steward:index
+```
+
+It reads posts in batches with a progress bar and queues every public one. If
+it is interrupted, run it again and it carries on after the last post it
+reached; `--restart` starts from the beginning. A forum on its own OpenSearch
+index has nothing to send, and the command says so.
 
 Requires **Flarum 2.0** and PHP 8.3+. A subscription is required:
 <https://ernestdefoe.online/account>

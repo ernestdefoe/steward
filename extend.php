@@ -40,7 +40,8 @@ return [
         ->set('stewardAsk', \Ernestdefoe\Steward\Api\AskThrottler::class),
 
     (new Extend\Console())
-        ->command(\Ernestdefoe\Steward\Console\WithdrawRestrictedCommand::class),
+        ->command(\Ernestdefoe\Steward\Console\WithdrawRestrictedCommand::class)
+        ->command(\Ernestdefoe\Steward\Console\IndexCommand::class),
 
     (new Extend\ServiceProvider())
         ->register(\Ernestdefoe\Steward\StewardServiceProvider::class),
