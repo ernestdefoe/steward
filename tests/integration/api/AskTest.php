@@ -114,6 +114,7 @@ class AskTest extends TestCase
     #[Test]
     public function a_hosted_answer_lists_its_sources_and_sends_the_threshold()
     {
+        $this->setting('steward.answers', '1');
         $this->fakeHosted();
 
         [$status, $body] = $this->ask(2);
