@@ -1,8 +1,15 @@
 {
     "name": "ernestdefoe/steward",
-    "description": "Hosted AI for Flarum \u2014 answers from your own content, and moderation that reads before it flags. No AI account, no API key.",
+    "description": "Hosted AI for Flarum — answers from your own content, and moderation that reads before it flags. No AI account, no API key.",
     "type": "flarum-extension",
     "license": "proprietary",
+    "authors": [
+        {
+            "name": "Ernest Defoe",
+            "email": "ernestdefoe@gmail.com",
+            "homepage": "https://ernestdefoe.online"
+        }
+    ],
     "support": {
         "forum": "https://discuss.flarum.org/d/39795-steward-hosted-ai-and-moderation-built-with-ai"
     },
