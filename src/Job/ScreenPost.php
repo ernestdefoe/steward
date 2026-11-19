@@ -7,76 +7,66 @@ use Ernestdefoe\Steward\Model\Review;
 use Ernestdefoe\Steward\Moderation\Decision;
 use Ernestdefoe\Steward\Moderation\Screener;
 use Flarum\Post\CommentPost;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Queue\InteractsWithQueue;
+use Flarum\Queue\AbstractJob;
+use Flarum\User\User;
 use Psr\Log\LoggerInterface;
 
-class ScreenPost implements ShouldQueue
+class ScreenPost extends AbstractJob
 {
-    // Queueable carries $queue, which the queue reads when it pushes the job
-    // (fof/horizon warned "Undefined property ...::$queue" on every push).
-    use Queueable, InteractsWithQueue;
-
-    public function __construct(private int $postId)
+    public function __construct(public readonly int $postId)
     {
+        parent::__construct();
     }
 
     public function handle(Screener $screener, LoggerInterface $log): void
     {
-        try {
-            /** @var CommentPost $post */
-            $post = CommentPost::query()->with('user')->findOrFail($this->postId);
-        } catch (ModelNotFoundException) {
-            // Deleted between posting and screening. Nothing to do, and not
-            // worth a failed job.
+        // The job carries an id, not a model, so a post deleted between posting
+        // and screening is simply not found: nothing to do, not a failed job.
+        $post = CommentPost::query()->with('user')->find($this->postId);
+        $user = $post?->user;
+
+        if (! $post || ! $user) {
             return;
         }
 
-        $user = $post->user;
-
-        if (! $user) {
-            return;
-        }
-
-        $decision = $screener->screen((string) $post->content, [
-            'postCount' => (int) ($user->comment_count ?? 0),
-            'accountAgeDays' => $user->joined_at ? $user->joined_at->diffInDays(Carbon::now()) : 999,
-            'isModerator' => $user->isAdmin() || $user->hasPermission('discussion.hide'),
-        ]);
+        $decision = $screener->screen((string) $post->content, self::author($user));
 
         /*
          * 🚨 An unscreened post is RECORDED, not silently allowed.
          *
          * If the allowance ran out or the relay was down we let the post
-         * through — the right call — but an admin has to be able to find the
-         * window where nothing was checked. Silence here would mean a forum
-         * believing it was moderated during an outage it never knew about.
+         * through, but an admin has to be able to find the window where
+         * nothing was checked.
          */
         if ($decision->action === Decision::ALLOW && ! $decision->unscreened) {
             return;
         }
 
-        Review::query()->updateOrCreate(
-            ['post_id' => $post->id],
-            [
-                'user_id' => $user->id,
-                'action' => $decision->action,
-                'source' => $decision->source,
-                'reasons' => json_encode($decision->reasons),
-                'confidence' => $decision->confidence,
-                'unscreened' => $decision->unscreened,
-                'created_at' => Carbon::now(),
-            ]
-        );
+        Review::query()->updateOrCreate(['post_id' => $post->id], [
+            'user_id' => $user->id,
+            'action' => $decision->action,
+            'source' => $decision->source,
+            'reasons' => json_encode($decision->reasons),
+            'confidence' => $decision->confidence,
+            'unscreened' => $decision->unscreened,
+            'created_at' => Carbon::now(),
+        ]);
 
         if ($decision->action === Decision::GUARDIAN) {
-            // Guardian owns the reporting duty; we only make sure it is told
-            // and that the post is queued for a human either way.
-            $log->warning('[steward] child-safety signal escalated to Guardian', [
-                'post_id' => $post->id,
-            ]);
+            // Guardian owns the reporting duty. Steward reports nothing itself:
+            // the review is marked "guardian" for a human, and the forum's log
+            // gets a warning an admin (or Guardian) can act on.
+            $log->warning('[steward] child-safety signal escalated to Guardian', ['post_id' => $post->id]);
         }
+    }
+
+    /** @return array{postCount:int, accountAgeDays:int, isModerator:bool} */
+    private static function author(User $user): array
+    {
+        return [
+            'postCount' => (int) ($user->comment_count ?? 0),
+            'accountAgeDays' => $user->joined_at ? (int) $user->joined_at->diffInDays(Carbon::now()) : 999,
+            'isModerator' => $user->isAdmin() || $user->hasPermission('discussion.hide'),
+        ];
     }
 }

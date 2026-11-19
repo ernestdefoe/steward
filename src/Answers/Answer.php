@@ -11,23 +11,22 @@ final class Answer
         public readonly bool $answered,
         public readonly bool $unavailable,
         public readonly bool $exhausted,
-        public readonly float $topScore,
     ) {
     }
 
     /** @param list<Passage> $sources */
     public static function found(string $text, array $sources): self
     {
-        return new self($text, $sources, true, false, false, 0.0);
+        return new self($text, $sources, true, false, false);
     }
 
-    public static function dontKnow(float $topScore): self
+    public static function dontKnow(): self
     {
-        return new self('', [], false, false, false, $topScore);
+        return new self('', [], false, false, false);
     }
 
     public static function unavailable(bool $exhausted): self
     {
-        return new self('', [], false, true, $exhausted, 0.0);
+        return new self('', [], false, true, $exhausted);
     }
 }

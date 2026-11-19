@@ -35,9 +35,9 @@ class PreFilter
      * @param int $newAccountDays Age below which an account gets more scrutiny.
      */
     public function __construct(
-        private int $trustedPosts = 25,
-        private int $newAccountDays = 7,
-        private ?TranslatorInterface $translator = null,
+        private TranslatorInterface $translator,
+        private int $trustedPosts,
+        private int $newAccountDays,
     ) {
     }
 
@@ -49,8 +49,6 @@ class PreFilter
      */
     private function reason(string $key, array $params = []): string
     {
-        $this->translator ??= resolve(TranslatorInterface::class);
-
         return $this->translator->trans('ernestdefoe-steward.api.reasons.'.$key, $params);
     }
 
@@ -72,49 +70,11 @@ class PreFilter
         }
 
         $text = trim($body);
-        $lower = mb_strtolower($text);
         $new = ($author['accountAgeDays'] ?? 999) < $this->newAccountDays;
-
-        $reasons = [];
-        $score = 0.0;
-
-        // --- link density -------------------------------------------------
         $links = preg_match_all('~https?://~i', $text);
         $words = max(1, str_word_count(strip_tags($text)));
 
-        if ($links > 0 && $new) {
-            $reasons[] = $this->reason('new_account_links', ['count' => $links]);
-            $score += $links >= 3 ? 0.55 : 0.3;
-        }
-
-        // A wall that is mostly URL is the classic drive-by.
-        if ($links >= 2 && $words < 25) {
-            $reasons[] = $this->reason('bare_links');
-            $score += 0.4;
-        }
-
-        // --- shouting -------------------------------------------------------
-        $letters = preg_replace('/[^a-z]/i', '', $text);
-        if (mb_strlen($letters) >= 20) {
-            $upper = preg_replace('/[^A-Z]/', '', $text);
-            $ratio = mb_strlen($upper) / mb_strlen($letters);
-            if ($ratio > 0.7) {
-                $reasons[] = $this->reason('capitals');
-                $score += 0.25;
-            }
-        }
-
-        // --- repetition -----------------------------------------------------
-        if (preg_match('/(.{6,})\1{2,}/su', $text)) {
-            $reasons[] = $this->reason('repetition');
-            $score += 0.45;
-        }
-
-        // --- contact-details bait ------------------------------------------
-        if ($new && preg_match('/\b(whats ?app|telegram|t\.me\/|wechat|\+\d{8,})\b/i', $lower)) {
-            $reasons[] = $this->reason('contact_details');
-            $score += 0.5;
-        }
+        [$reasons, $score] = $this->signals($text, $new, $links, $words);
 
         /*
          * 🚨 Scored, not decided.
@@ -133,15 +93,56 @@ class PreFilter
             return Verdict::escalate($reasons);
         }
 
-        /*
-         * Nothing tripped. A very short post from a brand-new account is still
-         * worth a look — it is how most spam actually arrives — but nothing
-         * else is.
-         */
+        // Nothing tripped. A very short post from a brand-new account is still
+        // worth a look — it is how most spam actually arrives — but nothing else is.
         if ($new && $words <= 3 && $links === 0) {
             return Verdict::escalate([$this->reason('almost_no_content')]);
         }
 
         return Verdict::clear();
+    }
+
+    /**
+     * Each heuristic that tripped, with the weight it adds.
+     *
+     * @return array{0: list<string>, 1: float}
+     */
+    private function signals(string $text, bool $new, int $links, int $words): array
+    {
+        $hits = [];
+
+        if ($links > 0 && $new) {
+            $hits[] = [$this->reason('new_account_links', ['count' => $links]), $links >= 3 ? 0.55 : 0.3];
+        }
+
+        // A wall that is mostly URL is the classic drive-by.
+        if ($links >= 2 && $words < 25) {
+            $hits[] = [$this->reason('bare_links'), 0.4];
+        }
+
+        if (self::shouting($text)) {
+            $hits[] = [$this->reason('capitals'), 0.25];
+        }
+
+        // Capped: a backreference over a very long post is slow, and a
+        // repeated phrase shows long before 5,000 characters.
+        if (preg_match('/(.{6,})\1{2,}/su', mb_substr($text, 0, 5000))) {
+            $hits[] = [$this->reason('repetition'), 0.45];
+        }
+
+        if ($new && preg_match('/\b(whats ?app|telegram|t\.me\/|wechat|\+\d{8,})\b/i', mb_strtolower($text))) {
+            $hits[] = [$this->reason('contact_details'), 0.5];
+        }
+
+        return [array_column($hits, 0), (float) array_sum(array_column($hits, 1))];
+    }
+
+    /** Mostly capitals, once there are enough letters to judge. */
+    private static function shouting(string $text): bool
+    {
+        $letters = preg_replace('/[^a-z]/i', '', $text);
+
+        return mb_strlen($letters) >= 20
+            && mb_strlen(preg_replace('/[^A-Z]/', '', $text)) / mb_strlen($letters) > 0.7;
     }
 }

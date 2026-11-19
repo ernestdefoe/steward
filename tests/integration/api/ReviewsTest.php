@@ -46,23 +46,34 @@ class ReviewsTest extends TestCase
         ]);
     }
 
-    private function queue(int $actor, string $filter = 'open'): array
+    /** The queue, flattened: each review's attributes with its integer id, the tab counts and the page. */
+    private function queue(int $actor, string $filter = 'open', int $offset = 0): array
     {
-        $response = $this->send($this->request('GET', '/api/steward/reviews', ['authenticatedAs' => $actor])->withQueryParams(['filter' => $filter]));
+        $response = $this->send($this->request('GET', '/api/steward-reviews', ['authenticatedAs' => $actor])
+            ->withQueryParams(['filter' => ['status' => $filter], 'page' => ['offset' => $offset]]));
+        $body = json_decode((string) $response->getBody(), true);
 
-        return [$response->getStatusCode(), json_decode((string) $response->getBody(), true)];
+        return [$response->getStatusCode(), [
+            'reviews' => array_map(fn ($r) => ['id' => (int) $r['id']] + $r['attributes'], $body['data'] ?? []),
+            'counts' => $body['meta']['counts'] ?? null,
+            'total' => $body['meta']['page']['total'] ?? null,
+            'next' => $body['links']['next'] ?? null,
+        ]];
     }
 
     private function resolve(int $actor, int $review, string $resolution): int
     {
-        return $this->send($this->request('POST', "/api/steward/reviews/$review/resolve", ['authenticatedAs' => $actor, 'json' => ['resolution' => $resolution]]))->getStatusCode();
+        return $this->send($this->request('PATCH', "/api/steward-reviews/$review", [
+            'authenticatedAs' => $actor,
+            'json' => ['data' => ['type' => 'steward-reviews', 'id' => (string) $review, 'attributes' => ['resolution' => $resolution]]],
+        ]))->getStatusCode();
     }
 
     #[Test]
     public function the_queue_is_for_moderators_only()
     {
         $this->assertSame(403, $this->queue(2)[0]);
-        $this->assertSame(403, $this->send($this->request('GET', '/api/steward/reviews'))->getStatusCode(), 'A guest');
+        $this->assertSame(401, $this->send($this->request('GET', '/api/steward-reviews'))->getStatusCode(), 'A guest');
 
         [$status] = $this->queue(3);
         $this->assertSame(200, $status);
@@ -90,14 +101,14 @@ class ReviewsTest extends TestCase
         $this->assertSame(10, $first['postId']);
         $this->assertSame('author10', $first['author']);
         $this->assertSame('Post by 10', $first['excerpt']);
-        $this->assertSame('/d/1-welcome/2', $first['url']);
+        $this->assertStringEndsWith('/d/1-welcome/2', $first['url']);
         $this->assertSame(['reads like spam'], $first['reasons']);
     }
 
     #[Test]
     public function only_a_moderator_resolves_and_only_with_a_known_outcome()
     {
-        $this->assertSame(403, $this->resolve(2, 1, 'kept'));
+        $this->assertContains($this->resolve(2, 1, 'kept'), [403, 404], 'A member can neither resolve nor see a review');
         $this->assertSame(422, $this->resolve(3, 1, 'deleted'));
         $this->assertSame(404, $this->resolve(3, 999, 'kept'));
 
@@ -109,6 +120,72 @@ class ReviewsTest extends TestCase
     }
 
     #[Test]
+    public function a_long_queue_is_paged_and_says_how_long_it_is()
+    {
+        $rows = [];
+        $posts = [];
+        foreach (range(100, 124) as $id) {
+            $posts[] = ['id' => 1000 + $id, 'discussion_id' => 1, 'number' => $id, 'created_at' => Carbon::now(), 'user_id' => 10, 'type' => 'comment', 'content' => '<t><p>More</p></t>'];
+            $rows[] = ['id' => $id, 'post_id' => 1000 + $id, 'user_id' => 10, 'action' => 'review', 'source' => 'model', 'reasons' => '[]', 'confidence' => 0.5, 'unscreened' => false, 'created_at' => Carbon::now()->subDay()];
+        }
+        $this->database()->table('posts')->insert($posts);
+        $this->database()->table('steward_reviews')->insert($rows);
+
+        [, $first] = $this->queue(3);
+        $this->assertCount(20, $first['reviews']);
+        $this->assertSame(30, $first['total'], '5 seeded + 25 more, not capped');
+        $this->assertSame(['open' => 30, 'unscreened' => 1], $first['counts']);
+        $this->assertNotNull($first['next']);
+
+        [, $second] = $this->queue(3, 'open', 20);
+        $this->assertCount(10, $second['reviews']);
+        $this->assertSame([], array_intersect(array_column($first['reviews'], 'id'), array_column($second['reviews'], 'id')));
+    }
+
+    #[Test]
+    public function a_reviewer_sees_only_reviews_of_posts_they_can_see()
+    {
+        // A reviewer who is not a moderator: the queue, but not hidden posts.
+        $this->database()->table('groups')->insert(['id' => 10, 'name_singular' => 'Reviewer', 'name_plural' => 'Reviewers']);
+        $this->database()->table('group_permission')->insert(['group_id' => 10, 'permission' => 'steward.review']);
+        $this->database()->table('users')->insert(['id' => 4, 'username' => 'reviewer', 'email' => 'r@machine.local', 'password' => 'too-obscure', 'is_email_confirmed' => 1, 'joined_at' => Carbon::now()]);
+        $this->database()->table('group_user')->insert(['user_id' => 4, 'group_id' => 10]);
+        $this->database()->table('posts')->where('id', 10)->update(['hidden_at' => Carbon::now(), 'hidden_user_id' => 3]);
+
+        [$status, $queue] = $this->queue(4);
+        $this->assertSame(200, $status);
+        $this->assertNotContains(1, array_column($queue['reviews'], 'id'), 'The hidden post is not shown');
+        $this->assertSame(4, $queue['counts']['open'], 'Nor counted');
+        $this->assertSame(404, $this->resolve(4, 1, 'kept'), 'Nor resolvable');
+
+        $this->assertContains(1, array_column($this->queue(3)[1]['reviews'], 'id'), 'A moderator, who can see it, still does');
+    }
+
+    #[Test]
+    public function deleting_a_post_takes_its_review_with_it()
+    {
+        $this->database()->table('posts')->where('id', 10)->delete();
+
+        $this->assertNotContains(1, array_column($this->queue(3)[1]['reviews'], 'id'), 'Gone from the queue on every database');
+
+        // SQLite keeps foreign keys switched off in Flarum; elsewhere the row itself goes.
+        if ($this->database()->getDriverName() !== 'sqlite') {
+            $this->assertSame(0, $this->database()->table('steward_reviews')->where('post_id', 10)->count());
+        }
+    }
+
+    #[Test]
+    public function steward_settings_are_checked_when_saved()
+    {
+        $save = fn (array $settings) => $this->send($this->request('POST', '/api/settings', ['authenticatedAs' => 1, 'json' => $settings]))->getStatusCode();
+
+        $this->assertSame(422, $save(['steward.answer_threshold' => '6.2']));
+        $this->assertSame(422, $save(['steward.trusted_posts' => '-1']));
+        $this->assertSame(422, $save(['steward.relay_url' => 'javascript:alert(1)']));
+        $this->assertSame(204, $save(['steward.answer_threshold' => '0.7', 'steward.trusted_posts' => '10', 'steward.opensearch_url' => '']));
+    }
+
+    #[Test]
     public function usage_is_for_admins_and_an_unconnected_forum_says_so()
     {
         $this->assertSame(403, $this->send($this->request('GET', '/api/steward/usage', ['authenticatedAs' => 3]))->getStatusCode());
@@ -116,6 +193,43 @@ class ReviewsTest extends TestCase
         $response = $this->send($this->request('GET', '/api/steward/usage', ['authenticatedAs' => 1]));
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(['connected' => false], json_decode((string) $response->getBody(), true));
+    }
+
+    #[Test]
+    public function usage_is_fetched_on_the_queue_and_kept_for_a_while()
+    {
+        $relay = new class extends \Ernestdefoe\Steward\Relay\RelayClient {
+            public int $calls = 0;
+
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
+            public function post(string $path, array $payload): array
+            {
+                $this->calls++;
+
+                return ['data' => ['plan' => 'Standard']];
+            }
+        };
+        $container = $this->app()->getContainer();
+        $container->instance(\Ernestdefoe\Steward\Relay\RelayClient::class, $relay);
+        $container->make(\Illuminate\Contracts\Cache\Repository::class)->flush();
+
+        $usage = fn () => json_decode((string) $this->send($this->request('GET', '/api/steward/usage', ['authenticatedAs' => 1]))->getBody(), true);
+
+        $this->assertSame(['connected' => true, 'plan' => 'Standard'], $usage(), 'The sync queue answers at once');
+        $this->assertSame(['connected' => true, 'plan' => 'Standard'], $usage());
+        $this->assertSame(1, $relay->calls, 'The second visit reads what the first fetched');
+
+        $this->send($this->request('POST', '/api/settings', ['authenticatedAs' => 1, 'json' => ['steward.site_key' => 'a-new-key']]));
+        $usage();
+        $this->assertSame(2, $relay->calls, 'A new key is asked about afresh');
     }
 
     private function reply(int $actor, string $content): int

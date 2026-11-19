@@ -4,6 +4,7 @@ namespace Ernestdefoe\Steward\Api;
 
 use Flarum\Api\Context;
 use Flarum\Api\Schema;
+use Flarum\Settings\SettingsRepositoryInterface;
 
 /**
  * Tells the frontend whether this person may open the queue, so the nav item
@@ -11,6 +12,10 @@ use Flarum\Api\Schema;
  */
 class ForumFields
 {
+    public function __construct(private SettingsRepositoryInterface $settings)
+    {
+    }
+
     public function __invoke(): array
     {
         return [
@@ -19,8 +24,7 @@ class ForumFields
 
             // So the nav item is only offered where asking actually works.
             Schema\Boolean::make('stewardAnswers')
-                ->get(fn () => (bool) resolve(\Flarum\Settings\SettingsRepositoryInterface::class)
-                    ->get('steward.answers')),
+                ->get(fn () => (bool) $this->settings->get('steward.answers')),
         ];
     }
 }

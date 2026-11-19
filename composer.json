@@ -15,11 +15,18 @@
     },
     "require": {
         "php": "^8.3",
-        "flarum/core": "^2.0"
+        "flarum/core": "^2.0",
+        "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {
         "flarum/phpstan": "^2.0",
-        "flarum/testing": "^2.0"
+        "flarum/testing": "^2.0",
+        "flarum/tags": "^2.0",
+        "flarum/approval": "^2.0"
+    },
+    "suggest": {
+        "flarum/tags": "Re-checks a discussion's posts for the answer index when its tags change.",
+        "flarum/approval": "Indexes a post for answers once it is approved."
     },
     "autoload": {
         "psr-4": {
@@ -39,7 +46,11 @@
                 "name": "fas fa-user-shield",
                 "backgroundColor": "#17864e",
                 "color": "#fff"
-            }
+            },
+            "optional-dependencies": [
+                "flarum/tags",
+                "flarum/approval"
+            ]
         }
     },
     "scripts": {

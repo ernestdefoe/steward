@@ -5,7 +5,6 @@ namespace Ernestdefoe\Steward\Tests\unit;
 use Ernestdefoe\Steward\Answers\Answerer;
 use Ernestdefoe\Steward\Answers\Passage;
 use Ernestdefoe\Steward\Answers\Retrieval;
-use Ernestdefoe\Steward\Relay\Quota;
 use Ernestdefoe\Steward\Relay\RelayClient;
 use Ernestdefoe\Steward\Relay\RelayException;
 use PHPUnit\Framework\TestCase;
@@ -37,7 +36,7 @@ class AnswererTest extends TestCase
                     throw $this->boom;
                 }
 
-                return ['data' => $this->data, 'quota' => new Quota()];
+                return ['data' => $this->data];
             }
         };
         $stub->data = $data;

@@ -12,7 +12,7 @@ class PreFilterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->filter = new PreFilter(translator: TestTranslator::make());
+        $this->filter = new PreFilter(TestTranslator::make(), trustedPosts: 25, newAccountDays: 7);
     }
 
     private function author(int $posts = 0, int $ageDays = 1, bool $mod = false): array
@@ -27,7 +27,7 @@ class PreFilterTest extends TestCase
         $v = $this->filter->screen($spam, $this->author(posts: 500, ageDays: 900));
 
         $this->assertSame(Verdict::CLEAR, $v->outcome);
-        $this->assertFalse($v->costsMoney());
+        $this->assertFalse($v->outcome === Verdict::ESCALATE);
     }
 
     public function testModeratorIsNeverScreened(): void
@@ -53,7 +53,7 @@ class PreFilterTest extends TestCase
         $v = $this->filter->screen($body, $this->author(posts: 0, ageDays: 0));
 
         $this->assertSame(Verdict::FLAG, $v->outcome);
-        $this->assertFalse($v->costsMoney(), 'a confident flag must not also pay for a model call');
+        $this->assertFalse($v->outcome === Verdict::ESCALATE, 'a confident flag must not also pay for a model call');
         $this->assertGreaterThanOrEqual(2, count($v->reasons));
     }
 
@@ -65,7 +65,7 @@ class PreFilterTest extends TestCase
         $v = $this->filter->screen($body, $this->author(posts: 0, ageDays: 1));
 
         $this->assertSame(Verdict::ESCALATE, $v->outcome);
-        $this->assertTrue($v->costsMoney());
+        $this->assertTrue($v->outcome === Verdict::ESCALATE);
     }
 
     public function testEveryNonClearVerdictCarriesReasons(): void
@@ -108,7 +108,7 @@ class PreFilterTest extends TestCase
         $escalated = 0;
         foreach ($corpus as [$body, $posts, $age]) {
             $v = $this->filter->screen($body, $this->author(posts: $posts, ageDays: $age));
-            if ($v->costsMoney()) {
+            if ($v->outcome === Verdict::ESCALATE) {
                 $escalated++;
             }
         }

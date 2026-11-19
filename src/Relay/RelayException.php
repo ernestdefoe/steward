@@ -18,7 +18,6 @@ class RelayException extends RuntimeException
         string $message,
         public readonly bool $exhausted = false,
         public readonly bool $retryable = false,
-        public readonly ?Quota $quota = null,
         // What went wrong, as a key the admin's usage panel translates.
         public readonly string $reason = 'unreachable',
     ) {

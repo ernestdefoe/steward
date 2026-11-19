@@ -55,11 +55,6 @@ class AskTest extends TestCase
                     new Passage('Staff only', 'The admin password is hunter2.', '/d/2-staff-only/1', 0.95),
                 ], 0.62);
             }
-
-            public function available(): bool
-            {
-                return true;
-            }
         });
 
         $relay = new class($answered) extends RelayClient {
@@ -105,6 +100,7 @@ class AskTest extends TestCase
                 return ['data' => ['answer' => 'Use a passkey.', 'answered' => true, 'sources' => [
                     ['title' => 'Passkeys', 'url' => '/d/1-passkeys/1', 'postId' => 1],
                     ['title' => 'Staff only', 'url' => '/d/2-staff-only/1', 'postId' => 2],
+                    ['title' => 'Not a link', 'url' => 'javascript:alert(1)'],
                 ]]];
             }
         };
@@ -119,8 +115,8 @@ class AskTest extends TestCase
 
         [$status, $body] = $this->ask(2);
 
-        $this->assertSame(200, $status, json_encode($body));
-        $this->assertSame([['title' => 'Passkeys', 'url' => '/d/1-passkeys/1']], $body['sources'], 'Cited, but not the hidden discussion');
+        $this->assertSame(201, $status, json_encode($body));
+        $this->assertSame([['title' => 'Passkeys', 'url' => '/d/1-passkeys/1']], $body['sources'], 'Cited, but not the hidden discussion, nor a script dressed as a link');
         $this->assertSame(0.7, self::$sent[0]['threshold']);
     }
 
@@ -135,13 +131,22 @@ class AskTest extends TestCase
             $this->cacheCleared = true;
         }
 
-        $request = $this->request('POST', '/api/steward/ask', ['json' => ['question' => $question]] + ($actor ? ['authenticatedAs' => $actor] : []));
+        $request = $this->request('POST', '/api/steward-questions', [
+            'json' => ['data' => ['type' => 'steward-questions', 'attributes' => ['question' => $question]]],
+        ] + ($actor ? ['authenticatedAs' => $actor] : []));
         if (! $actor) {
             $request = $this->requestWithCsrfToken($request);
         }
-        $response = $this->send($request);
 
-        return [$response->getStatusCode(), json_decode((string) $response->getBody(), true)];
+        return $this->flat($this->send($request));
+    }
+
+    /** Status, and the question's attributes with its id. */
+    private function flat(\Psr\Http\Message\ResponseInterface $response): array
+    {
+        $body = json_decode((string) $response->getBody(), true);
+
+        return [$response->getStatusCode(), isset($body['data']) ? ['id' => $body['data']['id']] + $body['data']['attributes'] : $body];
     }
 
     #[Test]
@@ -168,7 +173,7 @@ class AskTest extends TestCase
     {
         [$status, $body] = $this->ask(2);
 
-        $this->assertSame(200, $status);
+        $this->assertSame(201, $status);
         $this->assertFalse($body['answered']);
         $this->assertSame('unavailable', $body['reason'], 'Not dressed up as "found nothing"');
     }
@@ -180,7 +185,7 @@ class AskTest extends TestCase
 
         [$status, $body] = $this->ask(2);
 
-        $this->assertSame(200, $status);
+        $this->assertSame(201, $status);
         $this->assertTrue($body['answered']);
         $this->assertSame([['title' => 'Passkeys', 'url' => '/d/1-passkeys']], $body['sources'], 'The hidden discussion is not cited');
         $this->assertCount(1, self::$sent);
@@ -194,8 +199,8 @@ class AskTest extends TestCase
 
         [$status, $body] = $this->ask(2);
 
-        $this->assertSame(200, $status);
-        $this->assertSame(['answered' => false, 'reason' => 'not_found'], $body);
+        $this->assertSame(201, $status);
+        $this->assertSame(['status' => 'done', 'answered' => false, 'reason' => 'not_found'], array_intersect_key($body, ['status' => 1, 'answered' => 1, 'reason' => 1]));
     }
 
     #[Test]
@@ -214,10 +219,44 @@ class AskTest extends TestCase
         $this->fakeServices();
 
         foreach (range(1, 6) as $n) {
-            $this->assertSame(200, $this->ask(2)[0], "Ask $n");
+            $this->assertSame(201, $this->ask(2)[0], "Ask $n");
         }
         $this->assertSame(429, $this->ask(2)[0]);
-        $this->assertSame(200, $this->ask(1)[0], 'Someone else is not held back');
+        $this->assertSame(201, $this->ask(1)[0], 'Someone else is not held back');
+    }
+
+    #[Test]
+    public function a_queued_question_is_answered_later_and_only_to_whoever_asked()
+    {
+        $this->fakeServices();
+        $container = $this->app()->getContainer();
+        $pushed = new \ArrayObject();
+        $container->instance(\Illuminate\Contracts\Queue\Queue::class, new class($pushed) extends \Illuminate\Queue\NullQueue {
+            public function __construct(private \ArrayObject $pushed)
+            {
+            }
+
+            public function push($job, $data = '', $queue = null)
+            {
+                $this->pushed[] = $job;
+            }
+        });
+
+        [$status, $body] = $this->ask(2);
+        $this->assertSame(201, $status);
+        $this->assertSame('pending', $body['status']);
+        $this->assertSame([], self::$sent, 'Nothing is fetched inside the request');
+
+        $result = fn (int $actor) => $this->send($this->request('GET', '/api/steward-questions/'.$body['id'], ['authenticatedAs' => $actor]));
+        $this->assertSame('pending', $this->flat($result(2))[1]['status']);
+
+        $container->call([$pushed[0], 'handle']);
+
+        $done = $this->flat($result(2))[1];
+        $this->assertSame('done', $done['status']);
+        $this->assertSame([['title' => 'Passkeys', 'url' => '/d/1-passkeys']], $done['sources']);
+        $this->assertSame(404, $result(1)->getStatusCode(), 'Someone else asking for it is told it does not exist');
+        $this->assertSame(404, $this->send($this->request('GET', '/api/steward-questions/nope', ['authenticatedAs' => 2]))->getStatusCode());
     }
 
     #[Test]

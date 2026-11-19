@@ -31,6 +31,15 @@ keyword overlap.
 
 Members ask at `/ask`.
 
+The answer is worked out on Flarum's queue, not inside the member's request:
+retrieval and the answer are outbound calls that can take a while, and on the
+queue that time belongs to a worker, not to a PHP process serving pages. The
+Ask page checks back until the answer is ready. With a background queue
+(Redis or database, via `php flarum queue:work` or Horizon) a busy Ask page
+never slows the rest of the forum; with Flarum's default sync queue the answer
+simply arrives in the first response, as before. Each member can ask six
+times a minute.
+
 ### Moderation, that never deletes
 
 Every new post is read before it lands. Most are cleared instantly and for
@@ -58,6 +67,9 @@ whoever holds the `steward.review` permission.
   checked.
 - **Done:** what has already been dealt with.
 
+Each tab shows its true count and loads 20 at a time, with **Show more** for
+the rest, so a long backlog is never silently cut off.
+
 ### Usage where you will actually look
 
 Your consumption, and what is left of it, appear in **Steward's own settings
@@ -78,6 +90,12 @@ Admin → Steward:
 - **Answer questions from your forum:** the Ask page on or off.
 - **Trust members after this many posts:** members past this count are never screened. 25 by default.
 - **Answer confidence threshold:** below this, Steward says it does not know rather than answering from a weak match. It applies to every answer, whether retrieval runs on the hosted index or your own OpenSearch. 0.62 by default, which suits most forums.
+- **Treat accounts as new for this many days:** new accounts get a closer look. 7 by default.
+- **Service URL:** where Steward's service runs; leave it unless support asks.
+- **Your own OpenSearch:** optional; see [Running your own OpenSearch](#running-your-own-opensearch).
+
+Each value is checked when you save: the threshold must be between 0 and 1, the
+counts whole numbers, and addresses full `https://` URLs.
 
 Your usage panel sits at the top of the same page once the key is in.
 
@@ -140,9 +158,39 @@ against the member asking before it is answered from or cited, so nobody is
 answered from a thread they cannot open. For that check, index documents should
 carry a `postId` field or a `/d/<id>-<slug>/<number>` link in `url`.
 
+### Running your own OpenSearch
+
+Retrieval runs on your own cluster when **Cluster address** is filled in in
+Steward's settings, with the index name, the ID of a
+deployed embedding model and, if the cluster needs them, a username and
+password. A forum on its own cluster sends no posts to the hosted index: only a
+question and the passages found for it ever leave.
+
+Certificates are always verified. If your cluster uses a self-signed
+certificate, enter the path of its CA bundle in **CA bundle path**; Steward
+never turns verification off, because anyone on the network path could then
+feed the assistant passages of their own.
+
 On hosted retrieval your index is yours alone, and is **deleted when you
 cancel** — on the same call that ends the service, not in a cleanup job somebody
 remembers to run.
+
+---
+
+## API
+
+The moderation queue is a JSON:API resource, `steward-reviews`
+(`GET /api/steward-reviews?filter[status]=open|unscreened|resolved`, paged with
+`page[offset]`; `PATCH` with a `resolution` of `kept`, `removed` or `ignored`),
+readable only with the `steward.review` permission.
+
+Questions are the `steward-questions` resource: `POST` one with a `question`,
+then `GET /api/steward-questions/{id}` until its `status` is `done`; only the
+member who asked can read it back.
+
+One endpoint is a plain route on purpose, because it is not a record:
+`GET /api/steward/usage` proxies the relay for the admin page, so the site key,
+a bearer credential, never reaches the browser.
 
 ---
 

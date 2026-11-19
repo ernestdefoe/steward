@@ -2,7 +2,8 @@ import Extend from 'flarum/common/extenders';
 import app from 'flarum/admin/app';
 import UsagePanel from './components/UsagePanel';
 
-declare const m: any;
+// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
+// would bundle a second copy whose redraw never reaches Flarum's app.
 
 const t = (k: string) => app.translator.trans('ernestdefoe-steward.admin.' + k);
 
@@ -49,10 +50,44 @@ export default [
       help: t('settings.trusted_posts_help'),
     }))
     .setting(() => ({
+      setting: 'steward.new_account_days',
+      type: 'number',
+      min: 0,
+      label: t('settings.new_account_days_label'),
+      help: t('settings.new_account_days_help'),
+    }))
+    .setting(() => ({
       setting: 'steward.answer_threshold',
-      type: 'text',
+      type: 'number',
+      min: 0,
+      max: 1,
+      step: 0.01,
       label: t('settings.threshold_label'),
       help: t('settings.threshold_help'),
+    }))
+    .setting(() => ({
+      setting: 'steward.relay_url',
+      type: 'url',
+      label: t('settings.relay_url_label'),
+      help: t('settings.relay_url_help'),
+    }))
+
+    // Local retrieval: the forum's own cluster, instead of the hosted index.
+    .setting(() => ({
+      setting: 'steward.opensearch_url',
+      type: 'url',
+      label: t('settings.opensearch_url_label'),
+      help: t('settings.opensearch_help'),
+    }))
+    .setting(() => ({ setting: 'steward.opensearch_index', type: 'text', label: t('settings.opensearch_index_label') }))
+    .setting(() => ({ setting: 'steward.opensearch_model', type: 'text', label: t('settings.opensearch_model_label') }))
+    .setting(() => ({ setting: 'steward.opensearch_user', type: 'text', label: t('settings.opensearch_user_label') }))
+    .setting(() => ({ setting: 'steward.opensearch_pass', type: 'password', label: t('settings.opensearch_pass_label') }))
+    .setting(() => ({
+      setting: 'steward.opensearch_ca',
+      type: 'text',
+      label: t('settings.opensearch_ca_label'),
+      help: t('settings.opensearch_ca_help'),
     }))
 
     .permission(

@@ -31,8 +31,6 @@ class RelayClient
     /** Where the relay publishes its endpoints, relative to the site root. */
     private const PREFIX = '/api/steward/';
 
-    private Client $http;
-
     public function __construct(
         private string $baseUrl,
         private string $siteKey,
@@ -45,15 +43,10 @@ class RelayClient
          * sends no Origin is refused every time, which is what a stolen key
          * looks like and is exactly what this forum looked like until now.
          */
-        private string $ownUrl = '',
-        ?Client $http = null,
+        private string $ownUrl,
+        // Built by StewardServiceProvider with its timeouts.
+        private Client $http,
     ) {
-        $this->http = $http ?? new Client([
-            // Generous but finite. A hung relay must not hold a web request open.
-            'timeout' => 25,
-            'connect_timeout' => 6,
-            'http_errors' => true,
-        ]);
     }
 
     public function configured(): bool
@@ -63,7 +56,7 @@ class RelayClient
 
     /**
      * @param array<string,mixed> $payload
-     * @return array{data: array<string,mixed>, quota: Quota}
+     * @return array{data: array<string,mixed>}
      */
     public function post(string $path, array $payload): array
     {
@@ -76,9 +69,7 @@ class RelayClient
          *
          * Callers pass 'v1/usage'; the relay publishes /api/steward/v1/usage.
          * When those two disagreed, every call 404'd — and a 404 arrives
-         * looking exactly like a refusal or an outage, so the extension
-         * reported "the AI service is unavailable" and both halves looked
-         * individually healthy under direct testing. Nothing about a path
+         * looking exactly like a refusal or an outage, so nothing about a path
          * mismatch announces itself.
          */
         $url = rtrim($this->baseUrl, '/').self::PREFIX.ltrim($path, '/');
@@ -93,29 +84,8 @@ class RelayClient
                 'json' => $payload,
             ]);
         } catch (ClientException $e) {
-            $status = $e->getResponse()->getStatusCode();
-            $quota = Quota::fromHeaders($e->getResponse()->getHeaders());
-
-            /*
-             * 🚨 402 and 429 are the allowance, not a fault.
-             *
-             * They get their own flag so callers can degrade quietly — a
-             * member should never see a red error because the forum owner's
-             * month ran out. 401/403 mean the key is wrong or revoked, which
-             * IS an admin problem and is not retryable.
-             */
-            if ($status === 402 || $status === 429) {
-                throw new RelayException('Allowance used up for this period.', exhausted: true, quota: $quota, reason: 'exhausted');
-            }
-
-            throw new RelayException(
-                $status === 401 || $status === 403
-                    ? 'This site key was rejected. It may have been revoked or bound to another domain.'
-                    : 'The AI service refused the request.',
-                quota: $quota,
-                reason: $status === 401 || $status === 403 ? 'key_rejected' : 'refused'
-            );
-        } catch (ServerException|ConnectException $e) {
+            throw self::refusal($e);
+        } catch (ServerException|ConnectException) {
             // Their side, or the network. Worth trying again later; never worth
             // showing to a member.
             throw new RelayException('The AI service is unavailable.', retryable: true, reason: 'unavailable');
@@ -131,6 +101,29 @@ class RelayClient
             throw new RelayException('The AI service returned something unreadable.', reason: 'unreadable');
         }
 
-        return ['data' => $body, 'quota' => Quota::fromHeaders($res->getHeaders())];
+        return ['data' => $body];
+    }
+
+    /**
+     * 🚨 402 and 429 are the allowance, not a fault.
+     *
+     * They get their own flag so callers can degrade quietly — a member should
+     * never see a red error because the forum owner's month ran out. 401/403
+     * mean the key is wrong or revoked, which IS an admin problem and is not
+     * retryable.
+     */
+    private static function refusal(ClientException $e): RelayException
+    {
+        $status = $e->getResponse()->getStatusCode();
+
+        if ($status === 402 || $status === 429) {
+            return new RelayException('Allowance used up for this period.', exhausted: true, reason: 'exhausted');
+        }
+
+        if ($status === 401 || $status === 403) {
+            return new RelayException('This site key was rejected. It may have been revoked or bound to another domain.', reason: 'key_rejected');
+        }
+
+        return new RelayException('The AI service refused the request.', reason: 'refused');
     }
 }

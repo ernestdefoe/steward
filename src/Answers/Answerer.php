@@ -35,27 +35,10 @@ class Answerer
              * Nothing close enough. Say so rather than spending a model call to
              * dress up a bad match — this is the cheap half of not being wrong.
              */
-            return Answer::dontKnow($retrieval->topScore);
+            return Answer::dontKnow();
         }
 
-        /*
-         * 🚨 In hosted mode we send the question alone and the relay retrieves
-         * from the index it already holds. Fetching passages down only to send
-         * them straight back up would be two round trips to move data that
-         * never needed to leave.
-         */
-        $payload = ['question' => mb_substr($question, 0, 2000)];
-
-        if ($retrieval->deferred) {
-            // The relay applies the forum's own threshold to what it retrieves.
-            $payload['threshold'] = $retrieval->threshold();
-        } else {
-            $payload['passages'] = array_map(fn (Passage $p) => [
-                'title' => $p->title,
-                'text' => mb_substr($p->text, 0, 2000),
-                'url' => $p->url,
-            ], $retrieval->passages);
-        }
+        $payload = self::payload($question, $retrieval);
 
         try {
             $res = $this->relay->post('v1/answer', $payload);
@@ -74,7 +57,7 @@ class Answerer
         $answered = (bool) ($res['data']['answered'] ?? true);
 
         if (! $answered || $text === '') {
-            return Answer::dontKnow($retrieval->topScore);
+            return Answer::dontKnow();
         }
 
         /*
@@ -82,6 +65,32 @@ class Answerer
          * it returns where they came from; locally we already hold them.
          */
         return Answer::found($text, $retrieval->deferred ? self::sources($res['data']['sources'] ?? []) : $retrieval->passages);
+    }
+
+    /**
+     * 🚨 In hosted mode we send the question alone and the relay retrieves from
+     * the index it already holds. Fetching passages down only to send them
+     * straight back up would be two round trips to move data that never
+     * needed to leave.
+     *
+     * @return array<string, mixed>
+     */
+    private static function payload(string $question, Retrieval $retrieval): array
+    {
+        $payload = ['question' => mb_substr($question, 0, 2000)];
+
+        if ($retrieval->deferred) {
+            // The relay applies the forum's own threshold to what it retrieves.
+            $payload['threshold'] = $retrieval->threshold();
+        } else {
+            $payload['passages'] = array_map(fn (Passage $p) => [
+                'title' => $p->title,
+                'text' => mb_substr($p->text, 0, 2000),
+                'url' => $p->url,
+            ], $retrieval->passages);
+        }
+
+        return $payload;
     }
 
     /** @return list<Passage> */

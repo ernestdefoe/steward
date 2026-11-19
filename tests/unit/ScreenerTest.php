@@ -31,7 +31,7 @@ class ScreenerTest extends TestCase
             {
                 $this->calls++;
 
-                return ['data' => $this->data, 'quota' => new \Ernestdefoe\Steward\Relay\Quota()];
+                return ['data' => $this->data];
             }
         };
         $stub->data = $data;
@@ -68,7 +68,7 @@ class ScreenerTest extends TestCase
 
     private function screener(RelayClient $relay): Screener
     {
-        return new Screener(new PreFilter(translator: TestTranslator::make()), $relay, new NullLogger(), TestTranslator::make());
+        return new Screener(new PreFilter(TestTranslator::make(), trustedPosts: 25, newAccountDays: 7), $relay, new NullLogger(), TestTranslator::make());
     }
 
     private function author(int $posts = 0, int $age = 1, bool $mod = false): array
@@ -160,7 +160,7 @@ class ScreenerTest extends TestCase
         );
 
         $this->assertSame(Decision::GUARDIAN, $d->action);
-        $this->assertTrue($d->needsAHuman());
+        $this->assertNotSame(Decision::ALLOW, $d->action);
     }
 
     /** Nothing Steward decides may remove a post outright. */

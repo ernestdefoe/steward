@@ -1,16 +1,24 @@
 import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import type Mithril from 'mithril';
 
-declare const m: any;
+// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
+// would bundle a second copy whose redraw never reaches Flarum's app.
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-steward.admin.usage.' + k, p);
+const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-steward.admin.usage.' + k, p);
+
+interface Meter {
+  used: number | null;
+  limit: number | null;
+  remaining: number | null;
+}
 
 interface Usage {
   connected: boolean;
   plan?: string;
-  answers?: { used: number | null; limit: number | null; remaining: number | null };
-  screenings?: { used: number | null; limit: number | null; remaining: number | null };
+  answers?: Meter;
+  screenings?: Meter;
   resetsAt?: number;
   daily?: { day: string; actions: number }[];
   error?: string;
@@ -28,12 +36,27 @@ export default class UsagePanel extends Component {
   usage: Usage | null = null;
   loading = true;
 
-  oninit(vnode: any) {
-    super.oninit(vnode);
+  timer: ReturnType<typeof setTimeout> | null = null;
 
-    app.request<Usage>({ method: 'GET', url: app.forum.attribute('apiUrl') + '/steward/usage' }).then(
+  oninit(vnode: Mithril.Vnode) {
+    super.oninit(vnode);
+    this.load(10);
+  }
+
+  onremove(vnode: Mithril.VnodeDOM) {
+    super.onremove(vnode);
+    if (this.timer) clearTimeout(this.timer);
+  }
+
+  /** The relay is asked on the queue, so a first visit may need to check back. */
+  load(triesLeft: number) {
+    app.request<Usage & { pending?: boolean }>({ method: 'GET', url: app.forum.attribute('apiUrl') + '/steward/usage' }).then(
       (res) => {
-        this.usage = res;
+        if (res.pending && triesLeft > 1) {
+          this.timer = setTimeout(() => this.load(triesLeft - 1), 3000);
+          return;
+        }
+        this.usage = res.pending ? { connected: false, error: t('pending') as unknown as string } : res;
         this.loading = false;
         m.redraw();
       },
@@ -91,7 +114,7 @@ export default class UsagePanel extends Component {
     );
   }
 
-  bar(label: ReturnType<typeof t>, m2: any) {
+  bar(label: ReturnType<typeof t>, m2?: Meter) {
     if (!m2) return null;
 
     // No limit is a real state, not a zero. Rendering an empty bar for an

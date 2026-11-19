@@ -2,22 +2,18 @@ import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
-import AskPage from './components/AskPage';
-import ReviewQueuePage from './components/ReviewQueuePage';
+import type ItemList from 'flarum/common/utils/ItemList';
+import type Mithril from 'mithril';
 
-export { default as ReviewQueuePage } from './components/ReviewQueuePage';
-export { default as AskPage } from './components/AskPage';
+export { default as extend } from './extend';
 
 app.initializers.add('ernestdefoe/steward', () => {
-  app.routes['steward.queue'] = { path: '/moderation/queue', component: ReviewQueuePage };
-  app.routes['steward.ask'] = { path: '/ask', component: AskPage };
-
   /*
    * 🚨 IndexSidebar, not IndexPage: Flarum 2 moved the nav items there, and an
    * extend() of a method that no longer exists adds one nobody calls — neither
    * link was ever shown.
    */
-  extend(IndexSidebar.prototype, 'navItems', function (items: any) {
+  extend(IndexSidebar.prototype, 'navItems', function (items: ItemList<Mithril.Children>) {
     if (!app.session.user) return;
 
     // Asking is for members; the queue is for whoever moderates.

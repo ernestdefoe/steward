@@ -6,7 +6,7 @@ namespace Ernestdefoe\Steward\Moderation;
  * What the pre-filter decided about one post.
  *
  * Three outcomes, not two. "Clear" and "flag" are the cheap certainties; the
- * interesting one is PASS_TO_MODEL, which is the whole reason the pre-filter
+ * interesting one is ESCALATE, which is the whole reason the pre-filter
  * exists — it decides what is worth spending money on.
  */
 final class Verdict
@@ -39,10 +39,5 @@ final class Verdict
     public static function flag(array $reasons, float $confidence): self
     {
         return new self(self::FLAG, $reasons, $confidence);
-    }
-
-    public function costsMoney(): bool
-    {
-        return $this->outcome === self::ESCALATE;
     }
 }

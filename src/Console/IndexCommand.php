@@ -2,7 +2,7 @@
 
 namespace Ernestdefoe\Steward\Console;
 
-use Ernestdefoe\Steward\Job\IndexPost;
+use Ernestdefoe\Steward\Job\IndexPosts;
 use Ernestdefoe\Steward\Relay\RelayClient;
 use Flarum\Console\AbstractCommand;
 use Flarum\Post\CommentPost;
@@ -21,7 +21,8 @@ use Symfony\Component\Console\Input\InputOption;
  * before Steward was installed fire no event, so without this they are never
  * answered from. Chunked by id, and the last id done is saved after every
  * chunk: an interrupted run picks up where it stopped (--restart starts over).
- * Only what a guest can read is queued; IndexPost re-checks each post anyway.
+ * Only what a guest can read is queued, in batches of IndexPosts::BATCH, and
+ * the job re-checks each post anyway.
  */
 class IndexCommand extends AbstractCommand
 {
@@ -40,7 +41,7 @@ class IndexCommand extends AbstractCommand
         $this->setName('steward:index')
             ->setDescription('Send every public post to the Steward answer index (resumes where it stopped).')
             ->addOption('restart', null, InputOption::VALUE_NONE, 'Start again from the first post.')
-            ->addOption('chunk', null, InputOption::VALUE_REQUIRED, 'Posts read per batch.', '500');
+            ->addOption('chunk', null, InputOption::VALUE_REQUIRED, 'Posts read per batch.', (string) IndexPosts::BATCH);
     }
 
     protected function fire(): int
@@ -75,8 +76,8 @@ class IndexCommand extends AbstractCommand
         $queued = 0;
 
         $query->select('posts.id')->chunkById($chunk, function ($posts) use ($bar, &$queued) {
-            foreach ($posts as $post) {
-                $this->queue->push(new IndexPost((int) $post->id));
+            foreach (array_chunk($posts->pluck('id')->map(fn ($id) => (int) $id)->all(), IndexPosts::BATCH) as $batch) {
+                $this->queue->push(new IndexPosts($batch));
             }
 
             $queued += $posts->count();

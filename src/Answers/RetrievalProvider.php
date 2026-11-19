@@ -32,7 +32,4 @@ interface RetrievalProvider
      * than each inventing its own idea of "good enough".
      */
     public function find(string $question, int $limit = 5): Retrieval;
-
-    /** Whether this provider is configured enough to be asked anything. */
-    public function available(): bool;
 }

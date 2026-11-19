@@ -9,11 +9,12 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * Caps how often one member can ask.
  *
- * 🚨 An ask is two outbound calls — retrieval, then the relay — that can hold a
- * PHP worker for half a minute between them. A shared host has a handful of
- * workers, so a member (or a script with a member's cookie) pressing Ask in a
- * loop takes the whole forum down for everyone else, and spends the relay
- * quota doing it. Six a minute is far beyond anyone reading the answers.
+ * 🚨 An ask is two outbound calls — retrieval, then the relay — that can take
+ * half a minute. They run on the queue, but a member (or a script with a
+ * member's cookie) pressing Ask in a loop would still fill the queue, and on a
+ * forum whose queue runs jobs straight away it would tie up the PHP workers
+ * serving pages; either way it spends the relay quota. Six a minute is far
+ * beyond anyone reading the answers.
  *
  * Fixed window, best-effort via the cache. Returns null (no opinion) for every
  * other route, so it costs nothing on the rest of the API.
@@ -29,25 +30,22 @@ class AskThrottler
 
     public function __invoke(ServerRequestInterface $request): ?bool
     {
-        if ($request->getAttribute('routeName') !== 'steward.ask') {
+        if ($request->getAttribute('routeName') !== 'steward-questions.create') {
             return null;
         }
 
         $actor = RequestUtil::getActor($request);
 
         if ($actor->isGuest()) {
-            return null; // the controller turns guests away
+            return null; // the steward-questions endpoint is for signed-in members only
         }
 
         $key = 'steward.ask.'.$actor->id.'.'.intdiv(time(), self::WINDOW_SECONDS);
-        $count = (int) $this->cache->get($key, 0);
 
-        if ($count >= self::MAX_ASKS) {
-            return true;
-        }
+        // add() then increment(): atomic on every cache store, so two asks at
+        // the same moment cannot both read the same count.
+        $this->cache->add($key, 0, self::WINDOW_SECONDS);
 
-        $this->cache->put($key, $count + 1, self::WINDOW_SECONDS);
-
-        return null;
+        return (int) $this->cache->increment($key) > self::MAX_ASKS ? true : null;
     }
 }

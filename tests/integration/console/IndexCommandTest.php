@@ -4,7 +4,8 @@ namespace Ernestdefoe\Steward\Tests\integration\console;
 
 use Carbon\Carbon;
 use Ernestdefoe\Steward\Console\IndexCommand;
-use Ernestdefoe\Steward\Job\IndexPost;
+use Ernestdefoe\Steward\Index\Indexer;
+use Ernestdefoe\Steward\Job\IndexPosts;
 use Flarum\Discussion\Discussion;
 use Flarum\Post\Post;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -46,8 +47,9 @@ class IndexCommandTest extends ConsoleTestCase
         $this->app()->getContainer()->instance(Queue::class, new class extends \Illuminate\Queue\NullQueue {
             public function push($job, $data = '', $queue = null)
             {
-                $id = (new \ReflectionProperty(IndexPost::class, 'postId'))->getValue($job);
-                IndexCommandTest::$queued[] = $id;
+                if ($job instanceof IndexPosts) {
+                    array_push(IndexCommandTest::$queued, ...$job->postIds);
+                }
             }
         });
     }
@@ -111,10 +113,15 @@ class IndexCommandTest extends ConsoleTestCase
         };
 
         $this->app();
-        (new IndexPost(4))->handle($relay, new \Psr\Log\NullLogger());
-        (new IndexPost(1))->handle($relay, new \Psr\Log\NullLogger());
+        $this->app()->getContainer()->make(Indexer::class, ['relay' => $relay])->sync([4, 1]);
 
         $this->assertSame(['postId' => 4, 'deleted' => true], $relay->sent[0], 'A rename is not indexed');
         $this->assertSame('One', trim($relay->sent[1]['body']));
+        $this->assertMatchesRegularExpression('~^http.*/d/1-[^/]+/1$~', $relay->sent[1]['url'], 'Linked by the forum\'s own router');
+
+        $relay->sent = [];
+        $this->app()->getContainer()->make(SettingsRepositoryInterface::class)->set('steward.answers', '0');
+        $this->app()->getContainer()->make(Indexer::class, ['relay' => $relay])->sync([4, 1]);
+        $this->assertSame([['postId' => 4, 'deleted' => true]], $relay->sent, 'With answers off, withdrawals only');
     }
 }

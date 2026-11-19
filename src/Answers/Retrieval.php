@@ -22,7 +22,6 @@ final class Retrieval
     private function __construct(
         public readonly array $passages,
         public readonly bool $usable,
-        public readonly float $topScore,
         /**
          * 🚨 True when retrieval has not happened here and the relay will do
          * it. In hosted mode the index lives on our infrastructure, so sending
@@ -57,12 +56,12 @@ final class Retrieval
     {
         $top = $passages ? max(array_map(fn (Passage $p) => $p->score, $passages)) : 0.0;
 
-        return new self($passages, $passages !== [] && $top >= $threshold, $top, false, $threshold);
+        return new self($passages, $passages !== [] && $top >= $threshold, false, $threshold);
     }
 
     public static function nothing(): self
     {
-        return new self([], false, 0.0);
+        return new self([], false);
     }
 
     /**
@@ -71,7 +70,7 @@ final class Retrieval
      */
     public static function deferred(float $threshold = 0.0): self
     {
-        return new self([], true, 0.0, deferred: true, threshold: $threshold);
+        return new self([], true, deferred: true, threshold: $threshold);
     }
 
     /** The confidence floor this retrieval is judged by, in either mode. */

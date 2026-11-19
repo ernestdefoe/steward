@@ -26,9 +26,4 @@ class HostedRetrieval implements RetrievalProvider
     {
         return Retrieval::deferred($this->threshold);
     }
-
-    public function available(): bool
-    {
-        return true;
-    }
 }

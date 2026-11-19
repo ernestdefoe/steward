@@ -19,7 +19,7 @@ class Screener
         private PreFilter $preFilter,
         private RelayClient $relay,
         private LoggerInterface $log,
-        private ?TranslatorInterface $translator = null,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -103,8 +103,6 @@ class Screener
     /** Why a post went through unchecked, in the forum's language — a moderator reads it. */
     private function unscreened(string $key): string
     {
-        $this->translator ??= resolve(TranslatorInterface::class);
-
         return $this->translator->trans('ernestdefoe-steward.api.reasons.unscreened_'.$key);
     }
 }

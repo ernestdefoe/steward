@@ -3,6 +3,7 @@
 namespace Ernestdefoe\Steward\Model;
 
 use Flarum\Database\AbstractModel;
+use Flarum\Database\ScopeVisibilityTrait;
 use Flarum\Post\Post;
 use Flarum\User\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,22 +26,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Review extends AbstractModel
 {
+    use ScopeVisibilityTrait;
+
     protected $table = 'steward_reviews';
     public $timestamps = false;
 
     /*
-     * 🚨 Unguarded on purpose, and safe here specifically.
-     *
-     * Flarum's AbstractModel guards mass assignment, so updateOrCreate() with
-     * an attribute array throws MassAssignmentException — which the queue
-     * swallows into a FAIL, so the post goes through and the review row simply
-     * never appears. Silent, and exactly the shape of bug that makes a forum
-     * believe it is moderated when it is not.
-     *
-     * Nothing user-supplied reaches these attributes: every field is written by
-     * ScreenPost from a Decision the extension itself produced.
+     * 🚨 Listed, so updateOrCreate() in ScreenPost can write them. Flarum's
+     * AbstractModel guards mass assignment, and a MassAssignmentException in
+     * the job fails silently: the post goes through and the review row never
+     * appears. The resolution fields are not here; only ReviewResource sets
+     * them, one by one, from a moderator's request.
      */
-    protected $guarded = [];
+    protected $fillable = ['post_id', 'user_id', 'action', 'source', 'reasons', 'confidence', 'unscreened', 'created_at'];
 
     protected $casts = [
         'confidence' => 'float',
@@ -69,8 +67,11 @@ class Review extends AbstractModel
         return is_array($decoded) ? array_values(array_map('strval', $decoded)) : [];
     }
 
-    public function open(): bool
+    /** The post's first words as plain text, for the queue card. */
+    public function excerpt(): string
     {
-        return $this->resolution === null;
+        $text = trim((string) preg_replace('/\s+/', ' ', strip_tags((string) ($this->post->content ?? ''))));
+
+        return mb_substr($text, 0, 220);
     }
 }

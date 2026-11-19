@@ -22,8 +22,6 @@ use Throwable;
  */
 class LocalRetrieval implements RetrievalProvider
 {
-    private Client $http;
-
     public function __construct(
         private string $baseUrl,
         private string $index,
@@ -32,17 +30,12 @@ class LocalRetrieval implements RetrievalProvider
         private string $password,
         private float $threshold,
         private LoggerInterface $log,
-        ?Client $http = null,
+        // Built by StewardServiceProvider, with certificate verification on.
+        private Client $http,
     ) {
-        $this->http = $http ?? new Client([
-            'timeout' => 12,
-            'connect_timeout' => 5,
-            // Self-signed certificates are the norm on a private cluster.
-            'verify' => false,
-        ]);
     }
 
-    public function available(): bool
+    private function available(): bool
     {
         return $this->baseUrl !== '' && $this->index !== '' && $this->modelId !== '';
     }

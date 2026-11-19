@@ -2,11 +2,10 @@
 
 namespace Ernestdefoe\Steward\Listener;
 
-use Ernestdefoe\Steward\Job\IndexPost;
+use Ernestdefoe\Steward\Index\Requeue;
 use Ernestdefoe\Steward\Job\ScreenPost;
 use Flarum\Discussion\Discussion;
 use Flarum\Discussion\Event\Deleting as DiscussionDeleting;
-use Flarum\Post\CommentPost;
 use Flarum\Post\Event\Deleted;
 use Flarum\Post\Event\Hidden;
 use Flarum\Post\Event\Posted;
@@ -23,17 +22,21 @@ use Illuminate\Contracts\Queue\Queue;
  * us: screening can involve a network call, and holding a member's request open
  * while a third party thinks is how an AI feature makes a forum feel slow to
  * everybody — including the 99% whose posts are cleared for free.
+ *
+ * Tags and Approval have their own listeners, registered only when those
+ * extensions are enabled (see extend.php).
  */
 class ScreenNewPosts
 {
     public function __construct(
         private SettingsRepositoryInterface $settings,
         private Queue $queue,
+        private Requeue $requeue,
     ) {
     }
 
     /**
-     * 🚨 A subscriber, not four listeners.
+     * 🚨 A subscriber, not several listeners.
      *
      * Extend\Event::listen() takes callable|string — an array of
      * [Class::class, 'method'] is neither, and passing one is a BOOT error that
@@ -47,71 +50,36 @@ class ScreenNewPosts
         $events->listen(Restored::class, [$this, 'whenRevised']);
         $events->listen(Hidden::class, [$this, 'whenHidden']);
         $events->listen(Deleted::class, [$this, 'whenHidden']);
-
-        /*
-         * 🚨 Who can read a post also changes when its DISCUSSION changes: moved
-         * into a staff-only tag, made private, hidden, or approved. Each of
-         * those re-sends every post in it, and the job decides afresh whether
-         * a guest can read it — indexing it or withdrawing it accordingly.
-         * Class strings, so a forum without tags or approval loses nothing.
-         */
-        $events->listen('Flarum\\Tags\\Event\\DiscussionWasTagged', [$this, 'whenDiscussionChanged']);
-        $events->listen('Flarum\\Approval\\Event\\PostWasApproved', [$this, 'whenRevised']);
         $events->listen('eloquent.saved: '.Discussion::class, [$this, 'whenDiscussionSaved']);
         $events->listen(DiscussionDeleting::class, [$this, 'whenDiscussionDeleting']);
-    }
-
-    public function whenDiscussionChanged(object $event): void
-    {
-        if (isset($event->discussion) && $event->discussion instanceof Discussion) {
-            $this->requeueDiscussion($event->discussion);
-        }
     }
 
     /** Hidden, restored, made private or public, approved: anything that moves who can read it. */
     public function whenDiscussionSaved(Discussion $discussion): void
     {
         if ($discussion->wasChanged(['hidden_at', 'is_private', 'is_approved'])) {
-            $this->requeueDiscussion($discussion);
+            $this->requeue->discussion($discussion);
         }
     }
 
-    /** Its posts go with it and fire no events of their own, so withdraw them now. */
     public function whenDiscussionDeleting(DiscussionDeleting $event): void
     {
-        $this->requeueDiscussion($event->discussion, withdraw: true);
-    }
-
-    private function requeueDiscussion(Discussion $discussion, bool $withdraw = false): void
-    {
-        if (! $discussion->id || ! (bool) $this->settings->get('steward.answers')) {
-            return;
-        }
-
-        $ids = CommentPost::query()->where('discussion_id', $discussion->id)->where('type', 'comment')->pluck('id');
-
-        foreach ($ids as $id) {
-            $this->queue->push(new IndexPost((int) $id, withdraw: $withdraw));
-        }
+        $this->requeue->discussion($event->discussion, withdraw: true);
     }
 
     public function handle(Posted $event): void
     {
-        $post = $event->post;
-
         // Posted only ever carries a comment (event posts — renames, tag
         // changes — never fire it), so the one thing to check is that it saved.
-        if (! $post->id) {
+        if (! $event->post->id) {
             return;
         }
 
         if ((bool) $this->settings->get('steward.moderation')) {
-            $this->queue->push(new ScreenPost($post->id));
+            $this->queue->push(new ScreenPost($event->post->id));
         }
 
-        if ((bool) $this->settings->get('steward.answers')) {
-            $this->queue->push(new IndexPost($post->id));
-        }
+        $this->requeue->post($event->post->id);
     }
 
     /**
@@ -120,28 +88,18 @@ class ScreenNewPosts
      * Without this the index only ever grows, and the assistant answers from
      * text the author already removed.
      */
-    public function whenRevised(object $event): void
+    public function whenRevised(Revised|Restored $event): void
     {
-        $post = $event->post ?? null;
-
-        if ($post && $post->id && (bool) $this->settings->get('steward.answers')) {
-            $this->queue->push(new IndexPost($post->id));
-        }
+        $this->requeue->post((int) $event->post->id);
     }
 
     /**
-     * Withdraw a post from the index when it stops being public.
-     *
      * 🚨 Hiding must REMOVE, not merely stop updating. Otherwise a moderator
      * hides something and the assistant carries on quoting it to anyone who
      * asks the right question — gone from the forum, still in the answers.
      */
-    public function whenHidden(object $event): void
+    public function whenHidden(Hidden|Deleted $event): void
     {
-        $post = $event->post ?? null;
-
-        if ($post && $post->id && (bool) $this->settings->get('steward.answers')) {
-            $this->queue->push(new IndexPost($post->id, withdraw: true));
-        }
+        $this->requeue->post((int) $event->post->id, withdraw: true);
     }
 }
