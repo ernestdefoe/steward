@@ -5,9 +5,6 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type Review from '../models/Review';
 
-// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
-// would bundle a second copy whose redraw never reaches Flarum's app.
-
 const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-steward.forum.queue.' + k, p);
 
 type Filter = 'open' | 'unscreened' | 'resolved';

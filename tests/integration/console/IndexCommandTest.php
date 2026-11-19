@@ -90,6 +90,38 @@ class IndexCommandTest extends ConsoleTestCase
     }
 
     #[Test]
+    public function a_job_queued_by_the_old_version_is_still_handled()
+    {
+        $relay = new class extends \Ernestdefoe\Steward\Relay\RelayClient {
+            public array $sent = [];
+
+            public function __construct()
+            {
+            }
+
+            public function configured(): bool
+            {
+                return true;
+            }
+
+            public function post(string $path, array $payload): array
+            {
+                $this->sent[] = $payload;
+
+                return ['data' => []];
+            }
+        };
+        $container = $this->app()->getContainer();
+        $container->instance(\Ernestdefoe\Steward\Relay\RelayClient::class, $relay);
+
+        // As it sat in the queue before 1.3: serialized with its private properties.
+        $job = unserialize(serialize(new \Ernestdefoe\Steward\Job\IndexPost(3, withdraw: true)));
+        $container->call([$job, 'handle']);
+
+        $this->assertSame([['postId' => 3, 'deleted' => true]], $relay->sent);
+    }
+
+    #[Test]
     public function an_event_post_is_never_sent_as_content()
     {
         $relay = new class extends \Ernestdefoe\Steward\Relay\RelayClient {

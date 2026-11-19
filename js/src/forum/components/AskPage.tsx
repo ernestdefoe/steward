@@ -6,9 +6,6 @@ import type Mithril from 'mithril';
 import type Question from '../models/Question';
 import type { Source } from '../models/Question';
 
-// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
-// would bundle a second copy whose redraw never reaches Flarum's app.
-
 const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-steward.forum.ask.' + k, p);
 
 /** Only links into the forum itself, or ordinary web pages, are ever rendered. */

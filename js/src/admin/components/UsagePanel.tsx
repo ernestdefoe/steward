@@ -3,9 +3,6 @@ import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 
-// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
-// would bundle a second copy whose redraw never reaches Flarum's app.
-
 const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-steward.admin.usage.' + k, p);
 
 interface Meter {

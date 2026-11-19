@@ -2,9 +2,6 @@ import Extend from 'flarum/common/extenders';
 import app from 'flarum/admin/app';
 import UsagePanel from './components/UsagePanel';
 
-// `m` is Flarum's global Mithril, declared in core's typings. Importing 'mithril'
-// would bundle a second copy whose redraw never reaches Flarum's app.
-
 const t = (k: string) => app.translator.trans('ernestdefoe-steward.admin.' + k);
 
 export default [
